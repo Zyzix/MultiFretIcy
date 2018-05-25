@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="var" path="ICY_HOME/icy.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/java/Blocks.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/java/ezplug.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/java/Jama-1.0.3.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/java/MicroManager.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files/Micro-Manager-1.4/ij.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files/Micro-Manager-1.4/plugins/Micro-Manager/MMCoreJ.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files/Micro-Manager-1.4/plugins/Micro-Manager/MMJ_.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/poi-3.17.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/poi-examples-3.17.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/poi-excelant-3.17.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/poi-ooxml-3.17.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/poi-ooxml-schemas-3.17.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/poi-scratchpad-3.17.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/ooxml-lib/curvesapi-1.04.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/ooxml-lib/xmlbeans-2.6.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/lib/commons-codec-1.10.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/lib/commons-collections4-4.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/lib/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/lib/junit-4.12.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Zyzix/Desktop/PhD/cod/poi/lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="src/plugins/Zyzyx/theproj/ColorBar.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
