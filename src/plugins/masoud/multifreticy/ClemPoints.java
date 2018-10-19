@@ -1,4 +1,4 @@
-package plugins.Zyzyx.theproj;
+package plugins.masoud.multifreticy;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -90,7 +90,7 @@ public class ClemPoints extends Thread implements SequenceListener {
 	private boolean predictederrorselected = false;
 	private boolean overlayerrorselected = false;
 
-	Vector<PointsPair> fiducialsvector;
+	Vector<CPPointsPair> fiducialsvector;
 
 	double[][] targetpoints;
 	double[][] sourcepoints;
@@ -111,13 +111,15 @@ public class ClemPoints extends Thread implements SequenceListener {
 	private Overlay messageSource;
 	private Overlay messageTarget;
 	private Color[] Colortab;
+	private String base;
 	
-	public ClemPoints(Sequence target, Sequence source, String name) {
+	public ClemPoints(Sequence target, Sequence source, String name, String b) {
 		System.out.println("we in CP");
 		 targetseq = target;
 		 sourceseq = source;
 		 seqName = name;
 		 fileName = "3transfo.xml";
+		 base = b;
 		 
 			Colortab = new Color[9];
 			Colortab[0] = Color.RED;
@@ -270,7 +272,7 @@ public class ClemPoints extends Thread implements SequenceListener {
 	}
 	// To avoid overwriting LUT and metadata in the original filename
 	// overlay.
-	sourceseq.setName(sourceseq.getName() + " (transformed)");
+	//sourceseq.setName(sourceseq.getName() + " (transformed)"); //TODO: FUCK this code.
 
 	String name = fileName;
 	XMLFile = new File(FileSystemView.getFileSystemView().getDefaultDirectory().getPath() + "\\" + name);
@@ -283,7 +285,15 @@ public class ClemPoints extends Thread implements SequenceListener {
 	else { myXMLdoc = XMLUtil.createDocument(true);}
     }
     catch (ParserConfigurationException | SAXException | IOException e) { System.out.println("couldn't XML"); return;}
-	Element seqNode = XMLUtil.addElement(myXMLdoc.getDocumentElement(), seqName);
+    
+    //Create node for sequence
+	Element seqNode = XMLUtil.getElement(myXMLdoc.getDocumentElement(), seqName);
+	if (seqNode==null) {seqNode = XMLUtil.addElement(myXMLdoc.getDocumentElement(), seqName);}
+	else {XMLUtil.removeAllChildren(seqNode);}
+	//Set Base bool
+	if (seqName.equals(base)) {XMLUtil.setBooleanValue(seqNode, true);}
+	else {XMLUtil.setBooleanValue(seqNode, false);}
+	//Create transformation data element and fill it
 	Element transfoElement = XMLUtil.addElement(seqNode, "TargetSize");
 	XMLUtil.setAttributeIntValue(transfoElement, "width", targetseq.getWidth());
 	XMLUtil.setAttributeIntValue(transfoElement, "height", targetseq.getHeight());
@@ -677,12 +687,12 @@ public class ClemPoints extends Thread implements SequenceListener {
 	 * @param targetpoints2
 	 * @return
 	 */
-	Vector<PointsPair> createVectorfromdoublearray(double[][] sourcepoints2, double[][] targetpoints2) {
+	Vector<CPPointsPair> createVectorfromdoublearray(double[][] sourcepoints2, double[][] targetpoints2) {
 
-		Vector<PointsPair> points = new Vector<PointsPair>();
+		Vector<CPPointsPair> points = new Vector<CPPointsPair>();
 		if (targetpoints2.length == sourcepoints2.length) {
 			for (int i = 0; i < sourcepoints2.length; i++) {
-				points.addElement(new PointsPair(new Point2D.Double(sourcepoints2[i][0], sourcepoints2[i][1]),
+				points.addElement(new CPPointsPair(new Point2D.Double(sourcepoints2[i][0], sourcepoints2[i][1]),
 						new Point2D.Double(targetpoints2[i][0], targetpoints2[i][1])));
 				/*
 				 * System.out.print("Point " + i + 1 + " source " +
@@ -708,7 +718,7 @@ public class ClemPoints extends Thread implements SequenceListener {
 			// check if we are dealing with a 2D canvas and we have a valid
 			// Graphics object
 			if ((canvas instanceof IcyCanvas2D) && (g != null)) {
-				TargetRegistrationErrorMap ComputeFRE = new TargetRegistrationErrorMap();
+				CPTargetRegistrationErrorMap ComputeFRE = new CPTargetRegistrationErrorMap();
 				ComputeFRE.ReadFiducials(sequence);
 				// OMEXMLMetadataImpl sourcepixelsize = sequence.getMetadata();
 				double xsource = sequence.getPixelSizeX();
@@ -943,12 +953,12 @@ public class ClemPoints extends Thread implements SequenceListener {
 			// before applying the new transfo in order to avoid bad cropping of
 			// the pixels intensity values
 			Document document = XMLUtil.loadDocument(XMLFile);
-			SimilarityTransformation2D lasttransfo = null;
+			CPSimilarityTransformation2D lasttransfo = null;
 
 				Matrix combinedtransfobefore = getCombinedTransfo(document);
 				
-				SimilarityRegistrationAnalytic meanfiducialsalgo = new SimilarityRegistrationAnalytic();
-				SimilarityTransformation2D newtransfo = meanfiducialsalgo.apply(fiducialsvector);
+				CPSimilarityRegistrationAnalytic meanfiducialsalgo = new CPSimilarityRegistrationAnalytic();
+				CPSimilarityTransformation2D newtransfo = meanfiducialsalgo.apply(fiducialsvector);
 				lasttransfo = newtransfo;
 				//double Sangle = newtransfo.getS();
 				//double Cangle = newtransfo.getC();
@@ -963,7 +973,7 @@ public class ClemPoints extends Thread implements SequenceListener {
 				// directly to the new image
 				transfo = transfo.times(combinedtransfobefore);
 
-				ImageTransformer mytransformer = new ImageTransformer();
+				CPImageTransformer mytransformer = new CPImageTransformer();
 
 				mytransformer.setImageSource(sourceseq);
 				// mytransformer.setParameters(dx, dy, Sangle, Cangle, scale);
@@ -1142,6 +1152,11 @@ private void writeTransfo(Matrix transfo, int order) {
 	targetseq.removeListener(this);
 	sourceseq.removeListener(this);
 	System.out.println("Listeners off now");
+	Prestart.transfoFile = XMLFile;
+	sourceseq.removeOverlay(messageSource);
+	targetseq.removeOverlay(messageTarget);
+	sourceseq.removeOverlay(myoverlaysource);
+	targetseq.removeOverlay(myoverlaytarget);
 }
 
 void updateRoi() {
@@ -1167,7 +1182,7 @@ void updateRoi() {
 
 }
 
-private void updateSourcePoints2D(SimilarityTransformation2D newtransfo) {
+private void updateSourcePoints2D(CPSimilarityTransformation2D newtransfo) {
 
 	for (int i = 0; i < this.sourcepoints.length; i++) {
 		Point2D testPoint = new Point2D.Double(this.sourcepoints[i][0], this.sourcepoints[i][1]);

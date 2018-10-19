@@ -3,12 +3,15 @@ package poi;
 import java.awt.Desktop;
 import java.io.*;
 import java.util.Date;
+import java.util.List;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileSystemView;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.poi.ss.SpreadsheetVersion;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.charts.AxisCrosses;
 import org.apache.poi.ss.usermodel.charts.AxisPosition;
@@ -16,6 +19,7 @@ import org.apache.poi.ss.usermodel.charts.ChartDataSource;
 import org.apache.poi.ss.usermodel.charts.DataSources;
 import org.apache.poi.ss.usermodel.charts.LegendPosition;
 import org.apache.poi.ss.usermodel.charts.ScatterChartSeries;
+import org.apache.poi.ss.util.AreaReference;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
 import org.apache.poi.xssf.usermodel.charts.XSSFChartLegend;
@@ -23,15 +27,15 @@ import org.apache.poi.xssf.usermodel.charts.XSSFScatterChartData;
 import org.apache.poi.xssf.usermodel.charts.XSSFValueAxis;
 import org.jfree.data.xy.XYSeries;
 
-import icy.gui.dialog.MessageDialog;
+import icy.main.Icy;
 import loci.poi.hssf.util.CellReference;
+import plugins.masoud.multifreticy.Splitter;
 
 public class CreateWorkBook {
 
 	public String path = FileSystemView.getFileSystemView().getDefaultDirectory().getPath();
 	public XSSFWorkbook workbook;
 	public String name = "DataSheet";
-	public boolean writenow = false;
 	public CreateWorkBook() throws Exception {
 		//Open or create workbook
 		OpenWB(path, name);
@@ -41,14 +45,14 @@ public class CreateWorkBook {
  	      File file = new File(directory + "\\" + name + ".xlsx");
 	      FileInputStream fIP;
       
-	      if(file.isFile() && file.exists()) {
+	      if(file.exists() && file.length() != 0) {
 	  		try {
 				fIP = new FileInputStream(file);
 			    //Get the workbook instance for XLSX file 
 				 workbook = new XSSFWorkbook(fIP);
 				 fIP.close();
 		         System.out.println(name + ".xlsx file open successfully.");
-		         //return workbook;
+		         return workbook;
 			} catch (IOException e) {
 				e.printStackTrace();
 		         System.out.println("Error to open " + name + ".xlsx file, creating blank");
@@ -60,16 +64,16 @@ public class CreateWorkBook {
 			    	  file = new File(directory + "\\" + name + ".xlsx");
 			    	  i++;
 			      }
-			      //return workbook;
+			      return workbook;
 			}
 	      } else {
 	         System.out.println("Error to open " + name + ".xlsx file, creating blank");
 		      //Create Blank workbook
 		      workbook = new XSSFWorkbook(); 
-		      //return workbook;
+		      return workbook;
 	      }
-	      System.out.println("Error opening Workbook");
-		return null;
+//	      System.out.println("Error opening Workbook");
+//		return null;
 	}	
 
 	public void ApplyData(XYSeries chartData, String XYinfo) {
@@ -84,43 +88,98 @@ public class CreateWorkBook {
 		XSSFSheet spreadSheet = null;
 		Integer j = 0;
 		boolean done = false;
-		while (!done) {
-			if (workbook.getSheet(infoString) == null) {
-				System.out.println("Creating sheet " + infoString);
-				spreadSheet = workbook.createSheet(infoString);	
-				done = true;
-			}
-			else {
-				infoString = infoString.concat(j.toString());
-			}
+		String infoString0 = infoString;
+		//Finding free sheet name
+		while (!done) { 
+				if (workbook.getSheet(infoString) == null) {
+					System.out.println("Creating sheet " + infoString);
+					done = true;
+				}
+				else {
+					infoString = infoString0.concat(j.toString());
+					j++;
+				}
 		}
-		
-
-		//Create row object
+		//Cloning template or creating a new sheet
 		XSSFRow row;
-		row = spreadSheet.createRow(0);
-		Cell cell = row.createCell(0);
-		Cell cell2 = row.createCell(1);
-		cell.setCellValue("Time");
-		cell2.setCellValue("Mean Intensity");
+		if (workbook.getSheet("template") == null) {
+			spreadSheet = workbook.createSheet(infoString);	
+			System.out.println("No template, creating sheet " + spreadSheet.getSheetName());
+			//Create headers
+			row = spreadSheet.getRow(0);
+			if (row == null) { //somehow doing getRow and this ifblock makes a null exception on createcell
+				row = spreadSheet.createRow(0);
+			}
+			
+			Cell cell = row.createCell(0);
+			cell.setCellValue("Frame");
+	
+			cell = row.createCell(1);
+			cell.setCellValue("Time");
+	
+			cell = row.createCell(2);
+			cell.setCellValue("Mean Intensity");
+			
+			cell = row.createCell(12);
+			cell.setCellValue("Milestones");
+		} else {
+			//Clone template
+			System.out.println(workbook.getNameIndex("template"));
+			spreadSheet = workbook.cloneSheet(workbook.getNameIndex("template")+1, infoString);
+		}
+	//	CopySheets.copySheets(spreadSheet, templateSheet, true);
+
 		//Apply data to cells
 		for (int i = 0; i < chartData.getItemCount();i++) {
-			row = spreadSheet.createRow(i+1);
-			Cell cell3 = row.createCell(0);
-			Cell cell4 = row.createCell(1);
-			cell3.setCellValue(chartData.getDataItem(i).getXValue());
-			cell4.setCellValue(chartData.getDataItem(i).getYValue());	    	 
+//			List<XSSFTable> tableList = spreadSheet.getTables();
+//			CellReference CR = new CellReference(0, 0); 
+//			CellReference CR2 = new CellReference(5, 2);
+//			AreaReference my_data_range = new AreaReference(CR,CR2, SpreadsheetVersion.EXCEL2007);
+//			tableList.get(0).setArea(my_data_range);
+//			
+			row = spreadSheet.getRow(i+1);
+			if (row == null) {
+				row = spreadSheet.createRow(i+1);
+			}
+			
+			Cell cell = row.createCell(0);
+			cell.setCellValue(i+1);
+
+			cell = row.createCell(1);
+			cell.setCellValue(chartData.getDataItem(i).getXValue());
+
+			cell = row.createCell(2);
+			cell.setCellValue(chartData.getDataItem(i).getYValue());	
 		}
+		//Apply Milestones
+		for (int i = 0; i < Splitter.SU1.milestones.size();i++) {
+			row = spreadSheet.getRow(i+1);
+			if (row == null) {
+				row = spreadSheet.createRow(i+1);
+			}
+			
+			Cell cell = row.createCell(12);
+			cell.setCellValue(Splitter.SU1.milestones.get(i));
+			
+			long k = i-10;
+			long l = Splitter.SU1.milestones.get(i)+1;
+			if (k < 1) {k = 2;}
+			
+			cell = row.createCell(13);
+			cell.setCellFormula("AVERAGE(C" + l + ":C"+ k + ")");
+		}
+
+		
 		GenerateChart(spreadSheet);
 		System.out.println("APPLYDATA COMPLETE");
 	}
 	
-	public void Save(XSSFWorkbook wb) throws IOException {
+	public void Save(XSSFWorkbook wb, String n) throws IOException {
 	      //Create file system using specific name
-	      FileOutputStream out = new FileOutputStream(new File(path + "\\" + name + ".xlsx"));
+	      FileOutputStream out = new FileOutputStream(new File(path + "\\" + n + ".xlsx"));
 		  wb.write(out);
 		  out.close();
-	      System.out.println(name + ".xlsx written successfully");
+	      System.out.println(n + ".xlsx written successfully");
 	      ShowWB();
 	}
 	
@@ -135,8 +194,9 @@ public class CreateWorkBook {
 			}
 			catch(IOException e){
 				e.printStackTrace();
-				MessageDialog.showDialog("Close Excel");
-			}
+                JOptionPane.showMessageDialog(Icy.getMainInterface().getMainFrame(),
+                							  "Close the Excel sheet", "Datasheet is in use",
+                							  JOptionPane.ERROR_MESSAGE);}
 		}
 		  workbook.write(out);
 		  out.close();
@@ -144,7 +204,9 @@ public class CreateWorkBook {
 	      System.out.println(fname + ".xlsx written successfully");
 	      //Open the file
 	      ShowWB();
-	}
+	      //Exit plugin
+	      
+		}
 	
 	public void GenerateChart(XSSFSheet sheet) {
 		if (sheet.getLastRowNum()==0) {return;}

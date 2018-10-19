@@ -1,10 +1,12 @@
-package plugins.Zyzyx.theproj;
+package plugins.masoud.multifreticy;
 
 public class MyWaitNotify{
 
 	  MonitorObject myMonitorObject = new MonitorObject();
 	  boolean wasSignalled = false;
+	  boolean wasSignalled2 = false;
 
+	  
 	  public void doWait(){
 	    synchronized(myMonitorObject){
 	      while(!wasSignalled){
@@ -15,6 +17,25 @@ public class MyWaitNotify{
 	      //clear signal and continue running.
 	      wasSignalled = false;
 	    }
+	  }
+	  
+	  public void doWait2(){
+		    synchronized(myMonitorObject){
+		      while(!wasSignalled2){
+		        try{
+		          myMonitorObject.wait();
+		         } catch(InterruptedException e){e.printStackTrace();}
+		      }
+		      //clear signal and continue running.
+		      wasSignalled2 = false;
+		    }
+		  }
+	  
+	  public void doNotifyAll2() {
+		  synchronized(myMonitorObject) {
+			  myMonitorObject.notifyAll();
+			  wasSignalled2 = true;
+		  }
 	  }
 
 	  public void doNotify(){

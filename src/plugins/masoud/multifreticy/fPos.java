@@ -1,9 +1,7 @@
-package plugins.Zyzyx.theproj;
+package plugins.masoud.multifreticy;
 
 import java.awt.Point;
 import java.awt.Rectangle;
-
-import javafx.geometry.Bounds;
 
 public class fPos {
 	public Rectangle fBounds;

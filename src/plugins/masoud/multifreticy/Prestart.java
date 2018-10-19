@@ -30,21 +30,26 @@
  */ 
 
 
-package plugins.Zyzyx.theproj;
+package plugins.masoud.multifreticy;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
+//import org.json.JSONException;
 import org.json.JSONObject;
+//import org.micromanager.api.MMTags;
 import org.micromanager.api.SequenceSettings;
 import org.w3c.dom.Document;
 
 import icy.gui.dialog.MessageDialog;
 import icy.gui.frame.sequence.SequenceActionFrame;
+import icy.image.IcyBufferedImage;
 import icy.plugin.abstract_.PluginActionable;
 import icy.roi.ROI;
 import icy.sequence.Sequence;
@@ -63,29 +68,92 @@ import poi.CreateWorkBook;
  *   images/Save16.gif
  */
 public class Prestart extends PluginActionable
-                             implements ActionListener, AcquisitionListener {
-    static private final String newline = "\n";
-    JButton 							openButtonTransfo, openButtonChannel, saveButton;
-    JTextArea 							log;
-    static JFileChooser 				fc;
-    static File 						channelFile;
-    static File 						transfoFile;
-    final static SequenceActionFrame 	mainFrame = new SequenceActionFrame("Example", true);
-    public static boolean 				pause = false;
-	ArrayList<Thread> 					threads = new ArrayList<Thread>();
+                             implements ActionListener, AcquisitionListener, ItemListener {
 	
-	private static Sequence 					sequence;
-    private Splitter 					S1;
-
+    JButton 							openButtonTransfo, openButtonChannel, saveButton;
+    JCheckBox							transfoEnable, offlineCheckBox;
+    JTextArea 							log;
+    public JFileChooser 				fc;
+    public File 						channelFile;
+    ArrayList<Thread> 					threads;
+	public static long 					startTime;
+	public static Sequence 				sequence;
+	
+    static private final String 		newline = "\n";
+    public static Splitter 				S1;
+    public static Queuer				QR;
+    public static File 					transfoFile;
+    public static SequenceActionFrame 	mainFrame;
+    public static boolean 				exit, pause, transformEnabled, offlineBool;
+    public static CreateWorkBook 		wbc;
+    
 	public Prestart() {
+		startTime = 0;
+		
+		// create and load default properties
+		Properties configProperties = new Properties();
+		FileInputStream in;
+		try {
+			in = new FileInputStream("options.cfg");
+
+			configProperties.load(in);
+		in.close();
+		} catch (IOException e4) {
+			// TODO Auto-generated catch block
+			e4.printStackTrace();
+			MessageDialog.showDialog("unable to open config file");
+		}
+		/*
+		 * Planned stuff to have in options file
+		 * 	= Offline checkbox
+		 *  = Transform checkbox + transfofile
+		 *  = contour file
+		 *  
+		 *  = excel template
+		 *  
+		 *  = workbook save location
+		 *  = workbook naming
+		 *  
+		 *  = settings for first and so forth ROI drawn
+		 *  
+		 * 	= background correction
+		 *  = flat-fielding
+		 *  = other calculations
+		 *  
+		 */
+
+		
+		QR = new Queuer();
+		
+		mainFrame = new SequenceActionFrame("Example", true);
+		threads = new ArrayList<Thread>();
+		pause = false;
+		exit = false;
+		transformEnabled = false;
+		offlineBool = false;
+		System.out.println("Running version MFI");
     	mainFrame.getOkBtn().setEnabled(false);
+    	
     	//Create the log first, because the action listeners
         //need to refer to it.
         log = new JTextArea(5,20);
         log.setMargin(new Insets(5,5,5,5));
         log.setEditable(false);
         JScrollPane logScrollPane = new JScrollPane(log);
-
+        
+        //Create a checkboxes to enable transformations and offline
+        transfoEnable = new JCheckBox("Transform");
+        transfoEnable.setSelected(false);
+        transfoEnable.addItemListener(this);
+        
+        offlineCheckBox = new JCheckBox("Offline");
+        offlineCheckBox.setSelected(false);
+        offlineCheckBox.addItemListener(this);
+        
+        JPanel checkboxPanel = new JPanel();
+        checkboxPanel.add(transfoEnable);
+        checkboxPanel.add(offlineCheckBox);
+        
         //Create a file chooser
         fc = new JFileChooser();
 
@@ -121,10 +189,11 @@ public class Prestart extends PluginActionable
         buttonPanel.add(openButtonChannel);
         buttonPanel.add(openButtonTransfo);
         buttonPanel.add(saveButton);
-
+    	openButtonTransfo.setEnabled(false);
         //Add the buttons and the log to this panel.
-        mainFrame.getMainPanel().add(buttonPanel, BorderLayout.PAGE_START);
-        mainFrame.getMainPanel().add(logScrollPane, BorderLayout.CENTER);
+        mainFrame.getMainPanel().add(checkboxPanel, BorderLayout.PAGE_START);
+        mainFrame.getMainPanel().add(buttonPanel, BorderLayout.CENTER);
+        mainFrame.getMainPanel().add(logScrollPane, BorderLayout.PAGE_END);
 
         //define action to do when OK button is pressed
         mainFrame.setOkAction(new ActionListener()
@@ -132,46 +201,59 @@ public class Prestart extends PluginActionable
             @Override
             public void actionPerformed(ActionEvent e) //On OK click
             {
+            	//System.gc(); //useless?
+
                // get selected sequence
                sequence = mainFrame.getSequence();
-              // sequence.addListener(listener);
+
+               // sequence.addListener(listener);
                //remove ROI and load contour ROI from channelFile
                sequence.removeAllROI();
                if(LoadRois(channelFile,sequence)) { log.append("Loaded ROIs from " + channelFile.getName() + newline);}
                else	{MessageDialog.showDialog("LoadRois failed"); return;}
                //Create Excel WB
-                CreateWorkBook wbc = null;
 				try {
 					wbc = new CreateWorkBook();
+					System.out.println("WB created");
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
 				//Create Splitter thread
-	       		S1 = new Splitter(sequence, transfoFile, wbc);
+	       		try {
+					S1 = new Splitter(sequence, transfoFile);
+				} catch (InterruptedException e3) {
+					// TODO Auto-generated catch block
+					e3.printStackTrace();
+				}
 	
 	    		// Split the image
-	    		threads.add(S1);
-	    		S1.setName("S1");
-	    		System.out.println("start S1");
-	    		S1.start();
-	    		System.out.println(S1.getName());
-	    	    MicroManager.addAcquisitionListener(Prestart.this);
-	    	    
-	    	    
-
+	    		try {
+	    			if(!Prestart.pause) {
+	    				S1.run(sequence.getLastImage(), transfoFile);
+	    			}
+				} catch (InvocationTargetException | InterruptedException e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
 	    		
-               /*               //TODO:load channels file, split image, (remove channelsfile ROIs), apply correction from transfo file
-               	*				//TODO:continue to Draw Roi(s) prompt which copy-pastes (and listens for drawn roi to update gui? and has a checkbox to auto-duplicate or manual?)
-                * Prestart = micromanager listener, runs splitter every acquisition
-                * Splitter(sequence, transfoFile) -> seqList,transfoFile
-                * 	(run)TheProj(seqList, transfoFile) -> seqList
-                * 	(start)Startup(seqList) -> seqList,ROIdata
-                * 		Threading(seqList,ROIdata) -> ExcelData
-                */
-                
+	    		//Wait for Startup to be done
+	    		//QR.QW.doWait();
+	    		
+	    		//Start MM listener if online
+	    		if (offlineBool == false) {
+	    	    MicroManager.addAcquisitionListener(Prestart.this);
+	    		} else { 	    		//Offline Run:
+					try {
+						RunOffline();
+					} catch (InvocationTargetException | InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+	    		}
+
                 // no sequence
-                if (sequence == null || channelFile == null || transfoFile == null) {
-                    MessageDialog.showDialog("No sequence/file/file selected");
+                if (transfoFile == null) {
+                    //MessageDialog.showDialog("No sequence/file/file selected");
                 }
                 else {
                     //MessageDialog.showDialog("You have selected : " + sequence.getName());
@@ -215,15 +297,16 @@ public class Prestart extends PluginActionable
         //Handle save button action.
         //TODO: Saves settings to be loaded on next boot, remove the location prompt and save to documents
         } else if (e.getSource() == saveButton) {
-            int returnVal = fc.showSaveDialog(fc);
-            if (returnVal == JFileChooser.APPROVE_OPTION) {
-                File file = fc.getSelectedFile();
-                //TODO:This is where a real application would save the file.
-                log.append("Saving: " + file.getName() + "." + newline);
-            } else {
-                log.append("Save command cancelled by user." + newline);
-            }
-            log.setCaretPosition(log.getDocument().getLength());
+        	MessageDialog.showDialog("In development");
+//            int returnVal = fc.showSaveDialog(fc);
+//            if (returnVal == JFileChooser.APPROVE_OPTION) {
+//                File file = fc.getSelectedFile();
+//                //TODO:This is where a real application would save the file.
+//                log.append("Saving: " + file.getName() + "." + newline);
+//            } else {
+//                log.append("Save command cancelled by user." + newline);
+//            }
+//            log.setCaretPosition(log.getDocument().getLength());
         }
         ReadyCheck(); //Check if all files and selections are made, enable ok button if they are
     }
@@ -318,20 +401,77 @@ public class Prestart extends PluginActionable
     
 	@Override
 	public void acqImgReveived(TaggedImage image) {
-		if (pause == false) {
-			S1.run(sequence.getLastImage(), transfoFile);
+		System.out.println("img reveived");
+		if (startTime == 0) {
+			startTime = System.nanoTime();
+	 	    System.out.println("Start time = " + startTime);
 		}
+		if (exit == true ) {
+			System.out.println("img reveived exit");
+			MicroManager.removeAcquisitionListener(Prestart.this);
+			return;
+		} System.out.println(pause);
+		if (pause == false) {
+			System.out.println("img reveived run");
+			AcquiredObject acqObj = new AcquiredObject(sequence.getLastImage(),System.nanoTime());
+			//add to queue
+			QR.QueueUp(acqObj); //TODO: what'd happen if you went forward with taggedimage instead?
+			//notify queue
+			try {
+				QR.RunQueue();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		System.out.println("S1 ran, invokelater workd");
 	}
 
 	@Override
 	public void acquisitionStarted(SequenceSettings settings, JSONObject metadata) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void acquisitionFinished(List<Sequence> result) {
-		// TODO Auto-generated method stub
+		
+	}
+	
+	public void RunOffline() throws InvocationTargetException, InterruptedException {
+		startTime = System.nanoTime();
+ 	    System.out.println("Start time = " + startTime);
+		for (IcyBufferedImage img : sequence.getAllImage()) {
+			AcquiredObject AO = new AcquiredObject(img,System.nanoTime());
+			QR.QueueUp(AO); //TODO: what'd happen if you went forward with taggedimage instead?
+		}
+	}
+	
+	public static void ExitThis() {
+		exit = true;
+		mainFrame.removeAll();
+		mainFrame.dispose();
+	}
+
+	@Override
+	public void itemStateChanged(ItemEvent e) {
+		// Checkbox handler
+		Object source = e.getItemSelectable();
+		// TransfoEnable checkbox:
+		if (source == transfoEnable && e.getStateChange() == ItemEvent.DESELECTED) {
+	    	openButtonTransfo.setEnabled(false);
+	    	transformEnabled = false;
+	    } else if (source == transfoEnable && e.getStateChange() == ItemEvent.SELECTED) {
+	    	openButtonTransfo.setEnabled(true);
+	    	transformEnabled = true;
+	    }		
+		
+		if (source == offlineCheckBox && e.getStateChange() == ItemEvent.DESELECTED) {
+			offlineCheckBox.setEnabled(false);
+	    	offlineBool = false;
+	    } else if (source == offlineCheckBox && e.getStateChange() == ItemEvent.SELECTED) {
+	    	offlineCheckBox.setEnabled(true);
+	    	offlineBool = true;
+	    }		
 		
 	}
 	

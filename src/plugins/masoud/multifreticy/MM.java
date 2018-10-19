@@ -1,4 +1,4 @@
-package plugins.Zyzyx.theproj;
+package plugins.masoud.multifreticy;
 
 import java.util.ArrayList;
 import java.util.HashMap;
