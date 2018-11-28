@@ -442,7 +442,7 @@ public class Prestart extends PluginActionable
 		if (pause == false) {
 			System.out.println("img reveived run");
 			AcquiredObject acqObj = new AcquiredObject(sequence.getLastImage(),System.nanoTime());
-			//add to queue TODO: here we need to decide which queue to put this in based on position.
+			//add to queue TODO: Here we need to decide which queue to put this in based on position.
 			QR.QueueUp(acqObj); //TODO: what'd happen if you went forward with taggedimage instead?
 			//notify queue
 			try {
