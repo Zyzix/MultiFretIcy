@@ -47,7 +47,7 @@ public class CPSimilarityRegistrationAnalytic {
 		smeany /= numPoints;
 		tmeanx /= numPoints;
 		tmeany /= numPoints;
-
+		System.out.println("meanx " + smeanx + " smeany " + smeany + " tmeanx " + tmeanx + " tmeany " + tmeany);
 		// center the data around the means to remove translation
 
 		fiducialsE = fiducials.elements();
@@ -77,12 +77,12 @@ public class CPSimilarityRegistrationAnalytic {
 
 		}
 		double scale = Math.sqrt(meanlengthsecond / meanlengthfirst);
-
+		System.out.println("scale " + scale);
 		Matrix R = Matrix.identity(3, 3);
 
 		if (fiducials.size() > 2) { // otherwise we do not compute any rotation
 									// we put it as idendity matrix
-
+System.out.println("computing rotation");
 			// Compute rotation matrix as follows
 			// R=MQ(-1/2)
 			// where M=sum of outer product

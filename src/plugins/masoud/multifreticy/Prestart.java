@@ -75,6 +75,8 @@ public class Prestart extends PluginActionable
     JTextArea 							log;
     public JFileChooser 				fc;
     public File 						channelFile;
+    public Properties					cp;
+    
     ArrayList<Thread> 					threads;
 	public static long 					startTime;
 	public static Sequence 				sequence;
@@ -89,43 +91,10 @@ public class Prestart extends PluginActionable
     
 	public Prestart() {
 		startTime = 0;
-		
-		// create and load default properties
-		Properties configProperties = new Properties();
-		FileInputStream in;
-		try {
-			in = new FileInputStream("options.cfg");
-
-			configProperties.load(in);
-		in.close();
-		} catch (IOException e4) {
-			// TODO Auto-generated catch block
-			e4.printStackTrace();
-			MessageDialog.showDialog("unable to open config file");
-		}
-		/*
-		 * Planned stuff to have in options file
-		 * 	= Offline checkbox
-		 *  = Transform checkbox + transfofile
-		 *  = contour file
-		 *  
-		 *  = excel template
-		 *  
-		 *  = workbook save location
-		 *  = workbook naming
-		 *  
-		 *  = settings for first and so forth ROI drawn
-		 *  
-		 * 	= background correction
-		 *  = flat-fielding
-		 *  = other calculations
-		 *  
-		 */
-
-		
+				
 		QR = new Queuer();
 		
-		mainFrame = new SequenceActionFrame("Example", true);
+		mainFrame = new SequenceActionFrame("Settings", true);
 		threads = new ArrayList<Thread>();
 		pause = false;
 		exit = false;
@@ -194,6 +163,70 @@ public class Prestart extends PluginActionable
         mainFrame.getMainPanel().add(checkboxPanel, BorderLayout.PAGE_START);
         mainFrame.getMainPanel().add(buttonPanel, BorderLayout.CENTER);
         mainFrame.getMainPanel().add(logScrollPane, BorderLayout.PAGE_END);
+        
+        openButtonTransfo.setVisible(false);
+        transfoEnable.setVisible(false);
+        
+		// create and load default properties
+		cp = new Properties();
+		FileInputStream in;
+		try {
+			in = new FileInputStream("options.cfg");
+			cp.load(in);
+			in.close();
+			log.append("Config file loaded." + newline);
+			
+			String tfURL = cp.getProperty("transfofile", null);
+			String cfURL = cp.getProperty("contourfile", null);
+			
+			//Open tranfofile
+			if (tfURL != null) {
+				transfoFile = new File(tfURL);
+				if (transfoFile == null) {log.append("unable to open transformation file" + newline);}
+					else{log.append("Opening: " + transfoFile.getName() + "." + newline);}
+			}
+			//Open contourfile
+			if (cfURL != null) {
+				channelFile = new File(cfURL);
+				if (channelFile == null) {log.append("unable to open contour file" + newline);}
+					else{log.append("Opening: " + channelFile.getName() + "." + newline);}
+			}
+			offlineBool = Boolean.parseBoolean(cp.getProperty("offline", "false"));
+			transformEnabled = Boolean.parseBoolean(cp.getProperty("transform", "false"));
+			
+			log.append("Offline set to " + String.valueOf(offlineBool) + newline);
+			offlineCheckBox.setSelected(offlineBool);
+			log.append("Transform set to " + String.valueOf(transformEnabled) + newline);
+			transfoEnable.setSelected(transformEnabled);
+			//check here for previous channel comparison settings
+			log.append("Previous channel settings primed." + newline);
+			
+		} catch (IOException e4) {
+			e4.printStackTrace();
+			log.append("unable to open config file" + newline);
+		}
+		
+		ReadyCheck();
+		
+		/*
+		 * Planned stuff to have in options file
+		 * 	= Offline checkbox
+		 *  = Transform checkbox + transfofile
+		 *  = contour file
+		 *  
+		 *  = excel template
+		 *  
+		 *  = workbook save location
+		 *  = workbook naming
+		 *  
+		 *  = settings for first and so forth ROI drawn
+		 *  
+		 * 	= background correction
+		 *  = flat-fielding
+		 *  = other calculations
+		 *  
+		 */
+   
 
         //define action to do when OK button is pressed
         mainFrame.setOkAction(new ActionListener()
@@ -201,12 +234,9 @@ public class Prestart extends PluginActionable
             @Override
             public void actionPerformed(ActionEvent e) //On OK click
             {
-            	//System.gc(); //useless?
-
                // get selected sequence
                sequence = mainFrame.getSequence();
 
-               // sequence.addListener(listener);
                //remove ROI and load contour ROI from channelFile
                sequence.removeAllROI();
                if(LoadRois(channelFile,sequence)) { log.append("Loaded ROIs from " + channelFile.getName() + newline);}
@@ -222,7 +252,6 @@ public class Prestart extends PluginActionable
 	       		try {
 					S1 = new Splitter(sequence, transfoFile);
 				} catch (InterruptedException e3) {
-					// TODO Auto-generated catch block
 					e3.printStackTrace();
 				}
 	
@@ -232,32 +261,27 @@ public class Prestart extends PluginActionable
 	    				S1.run(sequence.getLastImage(), transfoFile);
 	    			}
 				} catch (InvocationTargetException | InterruptedException e2) {
-					// TODO Auto-generated catch block
 					e2.printStackTrace();
 				}
 	    		
-	    		//Wait for Startup to be done
-	    		//QR.QW.doWait();
-	    		
 	    		//Start MM listener if online
 	    		if (offlineBool == false) {
+	    			try {
 	    	    MicroManager.addAcquisitionListener(Prestart.this);
+	    			} catch (Exception e6){
+	    				e6.printStackTrace();
+	    				MessageDialog.showDialog("You chose online, but MicroManager is not running!");
+	    				ExitThis();
+	    				//TODO: make it properly exit
+	    			}
+	    			
 	    		} else { 	    		//Offline Run:
 					try {
 						RunOffline();
 					} catch (InvocationTargetException | InterruptedException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 	    		}
-
-                // no sequence
-                if (transfoFile == null) {
-                    //MessageDialog.showDialog("No sequence/file/file selected");
-                }
-                else {
-                    //MessageDialog.showDialog("You have selected : " + sequence.getName());
-                }
             }
         });
 
@@ -295,19 +319,23 @@ public class Prestart extends PluginActionable
             
 
         //Handle save button action.
-        //TODO: Saves settings to be loaded on next boot, remove the location prompt and save to documents
         } else if (e.getSource() == saveButton) {
-        	MessageDialog.showDialog("In development");
-//            int returnVal = fc.showSaveDialog(fc);
-//            if (returnVal == JFileChooser.APPROVE_OPTION) {
-//                File file = fc.getSelectedFile();
-//                //TODO:This is where a real application would save the file.
-//                log.append("Saving: " + file.getName() + "." + newline);
-//            } else {
-//                log.append("Save command cancelled by user." + newline);
-//            }
-//            log.setCaretPosition(log.getDocument().getLength());
-        }
+        	cp.setProperty("offline", String.valueOf(offlineBool));
+        	cp.setProperty("transform", String.valueOf(transformEnabled));
+        	if (transfoFile != null) {cp.setProperty("transfofile", transfoFile.getPath());}
+        		//else {log.append("No transformation file selected." + newline);} 
+        	if (channelFile != null) {cp.setProperty("contourfile", channelFile.getPath());}
+    			//else {log.append("No contour file selected." + newline);} 
+
+        	try {
+				cp.store(new FileOutputStream("options.cfg"), null);
+	            log.append("Saving procedure as: options.cfg" + newline);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+				log.append("Save failed!" + newline);
+			}
+
+        }              
         ReadyCheck(); //Check if all files and selections are made, enable ok button if they are
     }
     /** Returns an ImageIcon, or null if the path was invalid. */
@@ -414,13 +442,12 @@ public class Prestart extends PluginActionable
 		if (pause == false) {
 			System.out.println("img reveived run");
 			AcquiredObject acqObj = new AcquiredObject(sequence.getLastImage(),System.nanoTime());
-			//add to queue
+			//add to queue TODO: here we need to decide which queue to put this in based on position.
 			QR.QueueUp(acqObj); //TODO: what'd happen if you went forward with taggedimage instead?
 			//notify queue
 			try {
 				QR.RunQueue();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

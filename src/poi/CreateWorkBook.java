@@ -27,9 +27,11 @@ import org.apache.poi.xssf.usermodel.charts.XSSFScatterChartData;
 import org.apache.poi.xssf.usermodel.charts.XSSFValueAxis;
 import org.jfree.data.xy.XYSeries;
 
+import icy.gui.frame.progress.AnnounceFrame;
 import icy.main.Icy;
 import loci.poi.hssf.util.CellReference;
 import plugins.masoud.multifreticy.Splitter;
+import icy.gui.frame.progress.AnnounceFrame;
 
 public class CreateWorkBook {
 
@@ -76,12 +78,12 @@ public class CreateWorkBook {
 //		return null;
 	}	
 
-	public void ApplyData(XYSeries chartData, String XYinfo) {
+	public void ApplyData(XYSeries chartData, String XYinfo, String ROIname) {
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM");
 		Date date = new Date();
 		System.out.println(dateFormat.format(date)); //2016/11/16 12:08:43
 		
-		XYinfo = dateFormat.format(date) + " " + XYinfo;
+		XYinfo = dateFormat.format(date) + " " + ROIname + " " + XYinfo;
 		String infoString = StringUtils.abbreviate(XYinfo, 25);
 
 		//Get sheet or create a blank spreadsheet
@@ -123,9 +125,13 @@ public class CreateWorkBook {
 			cell = row.createCell(12);
 			cell.setCellValue("Milestones");
 		} else {
+			try {
 			//Clone template
 			System.out.println(workbook.getNameIndex("template"));
 			spreadSheet = workbook.cloneSheet(workbook.getNameIndex("template")+1, infoString);
+			} catch (Exception e) {
+				new AnnounceFrame("Cannot clone Template sheet, POI 4.0 is missing or a clashing version is present.",5);
+			}
 		}
 	//	CopySheets.copySheets(spreadSheet, templateSheet, true);
 
@@ -161,10 +167,11 @@ public class CreateWorkBook {
 			Cell cell = row.createCell(12);
 			cell.setCellValue(Splitter.SU1.milestones.get(i));
 			
-			long k = i-10;
-			long l = Splitter.SU1.milestones.get(i)+1;
-			if (k < 1) {k = 2;}
 			
+			long l = Splitter.SU1.milestones.get(i)+1;
+			long k = l-10;
+			if (k < 1) {k = 2;}
+			System.out.println(k + " " + l);
 			cell = row.createCell(13);
 			cell.setCellFormula("AVERAGE(C" + l + ":C"+ k + ")");
 		}
@@ -221,9 +228,9 @@ public class CreateWorkBook {
         XSSFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
         leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
-        CellRangeAddress crXData = new CellRangeAddress(1, sheet.getLastRowNum(), 0, 0);
-        CellRangeAddress crYData = new CellRangeAddress(1, sheet.getLastRowNum(), 1, 1);
-        CellReference crTitle = new CellReference(0,1);
+        CellRangeAddress crXData = new CellRangeAddress(1, sheet.getLastRowNum(), 1, 0);
+        CellRangeAddress crYData = new CellRangeAddress(1, sheet.getLastRowNum(), 2, 2);
+        CellReference crTitle = new CellReference(0,2);
         Cell cell = sheet.getRow(crTitle.getRow()).getCell(crTitle.getCol());
         
         ChartDataSource<Number> dsXData = DataSources.fromNumericCellRange(sheet, crXData);
@@ -231,8 +238,9 @@ public class CreateWorkBook {
         
         XSSFScatterChartData data = chart.getChartDataFactory().createScatterChartData();
         ScatterChartSeries seriesTitler = data.addSerie(dsXData, dsYData);
-        
+        try {
         seriesTitler.setTitle(cell.getStringCellValue());
+        } catch (Exception e) {seriesTitler.setTitle("seriesTitle");}
         chart.plot(data, bottomAxis, leftAxis);
         
         //set properties of first scatter chart data series to not smooth the line:

@@ -225,7 +225,7 @@ class Threading {
 		
 		private void Graph(XYDataset Ycol) {
 			    JPanel mainPanel = GuiUtil.generatePanel("Graph");
-			    IcyFrame mainFrame = GuiUtil.generateTitleFrame("Chart demo", mainPanel, new Dimension(300, 100), true, true, true,
+			    IcyFrame mainFrame = GuiUtil.generateTitleFrame(roi.getName(), mainPanel, new Dimension(300, 100), true, true, true,
 			            true);
 			
 	        JFreeChart chart = createChart(Ycol);
@@ -243,7 +243,7 @@ class Threading {
 		}
 		public void SendData() {
 			System.out.println("Writing to Excel from chart " + XYinfo[0]);
-			Prestart.wbc.ApplyData(KVRatio, XYinfo[0]);
+			Prestart.wbc.ApplyData(KVRatio, XYinfo[0], roi.getName());
 		}
 		
 		public void ExitThis() {

@@ -7,7 +7,12 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="/Icy-App/icy.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/MultiFretIcyLib"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/poi-4.0"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.USER_LIBRARY/MultiFretIcyLib"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.USER_LIBRARY/poi-4.0"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/opencv3.4.3">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Users/mr2617/Desktop/opencv343/opencv/build/java/x64"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

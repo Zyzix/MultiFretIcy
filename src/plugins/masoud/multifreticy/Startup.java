@@ -70,6 +70,8 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 	
 	public EzButton msButton;
 	
+	private ArrayList<EzGroup>	EzGroups = new ArrayList<EzGroup>();
+	
 	//Get Rois from split sequences and add to Rois list
 	public Startup(ArrayList<Sequence> seqList, String[] possibilities) {
 		choices = possibilities;
@@ -148,6 +150,9 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 				//Remove listeners to not trigger upon moving the ROIs
 				numy.removeListener(Startup.this);
 				divy.removeListener(Startup.this);
+				for (Sequence seq : sequences) {
+					seq.removeListener(this);
+				}
 				//Remove the ROIs from everywhere
 				rei.EVIRoi.remove();
 				//Add ROIs to selected sequences and add the listeners back
@@ -173,11 +178,11 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 //		        }
 			
 			//Milestone button
-				msButton = new EzButton("Milestone", this);
-				addEzComponent(msButton);
-
-				EzGUI g = getUI();
-				g.repack(true);
+//				msButton = new EzButton("Milestone", this);
+//				addEzComponent(msButton);
+//
+//				EzGUI g = getUI();
+//				g.repack(true);
 				
 			//Open threads
 				Threading R1 = new Threading (	rei, 
@@ -190,7 +195,14 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 											 	bgROI);
 				threads.add(R1);
 				}
+
 			}
+		//Milestone button
+		msButton = new EzButton("Milestone", this);
+		addEzComponent(msButton);
+
+		EzGUI g = getUI();
+		g.repack(true);
 		if (!Prestart.offlineBool) {
 			try {
 				System.out.println("SU: RUNQ");
@@ -315,7 +327,7 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 				            roy.setShowName(true);
 				            inty += 1;
 				            // test roi properties here
-				            System.out.println("Roi " + Roiname + "made in " + roy.getFirstSequence());
+				            System.out.println("Roi " + Roiname + " made in " + roy.getFirstSequence());
 				            
 				    		//Generate Roi integer components
 			    			EzVarBoolean RoiBool = new EzVarBoolean("Background " + roy.getName(), false);
@@ -326,10 +338,11 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 			    			RoiBool.addVisibilityTriggerTo(RoiNumer, false);
 			    			RoiBool.addVisibilityTriggerTo(RoiDivis, false);
 			    			EzGroup groupSequence = new EzGroup(roy.getName(),RoiNum.EVINum, RoiNum.EVIDiv, RoiNum.EVIBool);
-			
+
 			    			//Add to UI
 			    			addEzComponent(groupSequence);
-			
+			    			EzGroups.add(groupSequence);			
+			    			
 			    			//Update UI
 			    			//System.out.println("Updating UI for: " + Splitter.SU1.getName());
 			    			EzGUI g = getUI();			    			
@@ -345,6 +358,44 @@ public class Startup extends EzPlug implements Block, EzStoppable, SequenceListe
 	          }
 	        }
 	  //  }
+		    //TODO: test
+		    if (event.getType() == SequenceEventType.REMOVED)
+		    	{
+		        if (event.getSourceType() == SequenceEventSourceType.SEQUENCE_ROI)
+		        	{
+		        	ROI2D roy = (ROI2D) event.getSource();
+		        	String Roiname = roy.getName();
+		            System.out.println("Deleting Roi " + Roiname);
+		            EzVarIntRoi er = null;
+		            
+		            for (EzGroup c : EzGroups) {
+		            	if (c.name.equals(roy.getName())) {
+		            	c.dispose();
+			            System.out.println("Deleted Roi interface for " + Roiname);
+		            	for (EzVarIntRoi r : RoiNums) {
+		            		if (r.name.equals(roy.getName())) {
+		            			er = r;
+		            		}
+		            	}
+		            	for (int i = 0; i < royList.size(); i++) {
+		            		if (royList.get(i) == roy.getId()){
+		            			royList.remove(i);
+		            			System.out.println("Removed ROI ID: " + roy.getId());
+		            		}
+		            	}
+		    			if (er != null) {
+			    			RoiNums.remove(er);
+				            System.out.println("Deleted Roi data for " + Roiname);
+		    			} else {
+		    				System.out.println("Unable to delete data for " + Roiname);
+		    				}
+		            	}
+		            }
+		        }
+    			EzGUI g = getUI();			    			
+    			g.repack(true); //TODO: this makes the uithreadingviolation 
+		    }
+		    
 	}
 
 

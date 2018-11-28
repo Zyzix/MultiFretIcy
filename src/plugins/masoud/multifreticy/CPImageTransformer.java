@@ -122,10 +122,11 @@ public class CPImageTransformer implements Runnable {
 	 * ONLY of the ICY sequence loaded. LUT problem have been solved. Maybe have
 	 * a look from anti aliasing side for interpolation problem?
 	 */
-	public void run() {
+	public IcyBufferedImage tork() {
 		//System.out.println("I will apply transfo now");
 		// add the multi channel case
 		//
+		IcyBufferedImage img = null;
 		int nbt = sequence.getSizeT();
 		int nbz = sequence.getSizeZ();
 		Sequence newseq = SequenceUtil.getCopy(sequence);
@@ -144,10 +145,11 @@ public class CPImageTransformer implements Runnable {
 					// PB de CHANGEMENT DE TAILLE de SEQUENCE? regarder crop?
 					// + pour memoire ou temps le faire uniquement sur les
 					// images affichées?
-					IcyBufferedImage image = transformIcyImage(newseq, t, z);
+					img = transformIcyImage(newseq, t, z);
 					
-					sequence.setImage(t, z, image);
+					sequence.setImage(t, z, img);
 					progress.setPosition(1*(z+t*nbz));
+					System.out.println("transforstuff is done here 1111xx");
 				}
 			}
 			//
@@ -159,7 +161,7 @@ public class CPImageTransformer implements Runnable {
 		}
 		progress.close();
 		System.out.println("have been aplied");
-
+		return img;
 	}
 
 	private IcyBufferedImage transformIcyImage(Sequence seq, int t, int z) {
@@ -227,6 +229,12 @@ public class CPImageTransformer implements Runnable {
 		//imagetobekept.dataChanged();
 		return imagetobekept;
 
+	}
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	
