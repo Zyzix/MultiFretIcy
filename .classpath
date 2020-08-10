@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry excluding="org/mariuszgromada/math/mxparser/mathcollection/" kind="src" path="src"/>
 	<classpathentry kind="lib" path="/Icy-App/icy.jar"/>
-	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.USER_LIBRARY/MultiFretIcyLib"/>
-	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.USER_LIBRARY/poi-4.0"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/opencv3.4.3">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Users/mr2617/Desktop/opencv343/opencv/build/java/x64"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/MultiFretIcyLib"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
+	<classpathentry kind="lib" path="//icnas4.cc.ic.ac.uk/mr2617/git/Icy-App/plugins/adufour/poi/POI.jar"/>
+	<classpathentry kind="lib" path="H:/eclipse-workspace/java/MathParser.org-mXparser-v.4.2.0-jdk.1.8.jar"/>
+	<classpathentry kind="lib" path="//icnas4.cc.ic.ac.uk/mr2617/eclipse-workspace/java/opencv-343.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

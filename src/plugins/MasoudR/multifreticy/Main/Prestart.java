@@ -30,7 +30,7 @@
  */ 
 
 
-package plugins.masoud.multifreticy;
+package plugins.MasoudR.multifreticy.Main;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -40,59 +40,68 @@ import java.util.Properties;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
-
-//import org.json.JSONException;
+import org.json.JSONException;
 import org.json.JSONObject;
-//import org.micromanager.api.MMTags;
+import org.micromanager.api.PositionList;
+import org.micromanager.MMStudio;
 import org.micromanager.api.SequenceSettings;
 import org.w3c.dom.Document;
 
+import icy.sequence.Sequence;
 import icy.gui.dialog.MessageDialog;
 import icy.gui.frame.sequence.SequenceActionFrame;
 import icy.image.IcyBufferedImage;
-import icy.plugin.abstract_.PluginActionable;
+import icy.main.Icy;
 import icy.roi.ROI;
-import icy.sequence.Sequence;
 
 import icy.sequence.edit.ROIAddsSequenceEdit;
 import icy.util.XMLUtil;
 import mmcorej.TaggedImage;
-
+import plugins.MasoudR.multifreticy.DataObjects.AcquiredObject;
+import plugins.MasoudR.multifreticy.DataObjects.MyCoordinates;
 import plugins.tprovoost.Microscopy.MicroManager.MicroManager;
 import plugins.tprovoost.Microscopy.MicroManager.event.AcquisitionListener;
-import poi.CreateWorkBook;
+
 
 /*
  * FileChooserDemo.java uses these files:
  *   images/Open16.gif
  *   images/Save16.gif
  */
-public class Prestart extends PluginActionable
+public class Prestart  
                              implements ActionListener, AcquisitionListener, ItemListener {
 	
-    JButton 							openButtonTransfo, openButtonChannel, saveButton;
-    JCheckBox							transfoEnable, offlineCheckBox;
+    JButton 							calcsButton, browseButton, openButtonTransfo, openButtonChannel, saveButton;
+    JCheckBox							transfoEnable, offlineCheckBox, calcCheckBox, wsEnable;
     JTextArea 							log;
+    JTextField							outputLocation;
     public JFileChooser 				fc;
-    public File 						channelFile;
+    public  File 						transfoFile, calcsFile, channelFile;
     public Properties					cp;
     
     ArrayList<Thread> 					threads;
-	public static long 					startTime;
-	public static Sequence 				sequence;
+	public long 						startTime;
+	public Sequence 					sequence;
+	public ArrayList<Sequence>			sequences;
 	
-    static private final String 		newline = "\n";
-    public static Splitter 				S1;
-    public static Queuer				QR;
-    public static File 					transfoFile;
-    public static SequenceActionFrame 	mainFrame;
-    public static boolean 				exit, pause, transformEnabled, offlineBool;
-    public static CreateWorkBook 		wbc;
+    private final String 				newline = "\n";
+    public Splitter 					S1;
+    public Queuer						QR;
+    public  SequenceActionFrame 		mainFrame;
+    public  boolean 					exit, pause, transformEnabled, offlineBool, mpBool, calcBool, wsBool;
+    public  CreateWorkBook 				wbc;
     
-	public Prestart() {
+	public MMStudio 					mStudio;
+	public PositionList 				posList;
+	
+	private ArrayList<ArrayList<MyCoordinates>> allCorners = new ArrayList<ArrayList<MyCoordinates>>();
+
+	
+	public Prestart() { 
 		startTime = 0;
-				
-		QR = new Queuer();
+						
+		sequences = new ArrayList<Sequence>();
+		
 		
 		mainFrame = new SequenceActionFrame("Settings", true);
 		threads = new ArrayList<Thread>();
@@ -100,6 +109,8 @@ public class Prestart extends PluginActionable
 		exit = false;
 		transformEnabled = false;
 		offlineBool = false;
+		mpBool = true;
+		calcBool = false;
 		System.out.println("Running version MFI");
     	mainFrame.getOkBtn().setEnabled(false);
     	
@@ -119,65 +130,90 @@ public class Prestart extends PluginActionable
         offlineCheckBox.setSelected(false);
         offlineCheckBox.addItemListener(this);
         
+//        mpCheckBox = new JCheckBox("MultiPos"); //Deprecated, always true
+//        mpCheckBox.setSelected(false);
+//        mpCheckBox.addItemListener(this);
+        
+        calcCheckBox = new JCheckBox("CustomCalcs");
+        calcCheckBox.setSelected(false);
+        calcCheckBox.addItemListener(this);
+        
+        wsEnable = new JCheckBox("Workspace");
+        wsEnable.setSelected(false);
+        wsEnable.addItemListener(this);
+        
         JPanel checkboxPanel = new JPanel();
         checkboxPanel.add(transfoEnable);
         checkboxPanel.add(offlineCheckBox);
+//        checkboxPanel.add(mpCheckBox); //Deprecated, always true
+        checkboxPanel.add(calcCheckBox);
+        checkboxPanel.add(wsEnable);
         
         //Create a file chooser
         fc = new JFileChooser();
 
-        //Uncomment one of the following lines to try a different
-        //file selection mode.  The first allows just directories
-        //to be selected (and, at least in the Java look and feel,
-        //shown).  The second allows both files and directories
-        //to be selected.  If you leave these lines commented out,
-        //then the default mode (FILES_ONLY) will be used.
-        //
-        //fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        //fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-
-        //Create the open button.  We use the image from the JLF
-        //Graphics Repository (but we extracted it from the jar).
-        openButtonChannel = new JButton("Open a File...",
+        openButtonChannel = new JButton("Select Contour-file",
                                  createImageIcon("images/Open16.gif"));
         openButtonChannel.addActionListener(this);
         
+        calcsButton = new JButton("Select Calculations",
+                createImageIcon("images/Open16.gif"));
+        calcsButton.addActionListener(this);
+
+        
         //Same for the other file opening button
         openButtonTransfo = new JButton("Open a File...",
-                createImageIcon("images/Open16.gif"));
+                createImageIcon("images/Open17.gif"));
         openButtonTransfo.addActionListener(this);
 
-        //Create the save button.  We use the image from the JLF
-        //Graphics Repository (but we extracted it from the jar).
+        //Create the save button.
         saveButton = new JButton("Save Settings...",
                                  createImageIcon("images/Save16.gif"));
         saveButton.addActionListener(this);
+        
+        //Textbox for excel output URL
+        outputLocation = new JTextField(System.getProperty("user.home") + "\\Datasheet.xlsx");
 
+        browseButton = new JButton("Open a File...",
+                createImageIcon("images/Browse16.gif"));
+        browseButton.addActionListener(this);
+        
         //For layout purposes, put the buttons in a separate panel
         JPanel buttonPanel = new JPanel(); //use FlowLayout
         buttonPanel.add(openButtonChannel);
+        buttonPanel.add(calcsButton);
         buttonPanel.add(openButtonTransfo);
         buttonPanel.add(saveButton);
+        
+        JPanel outputPanel = new JPanel(); //use FlowLayout
+        outputPanel.add(outputLocation);
+        outputPanel.add(browseButton);
+        
     	openButtonTransfo.setEnabled(false);
         //Add the buttons and the log to this panel.
         mainFrame.getMainPanel().add(checkboxPanel, BorderLayout.PAGE_START);
         mainFrame.getMainPanel().add(buttonPanel, BorderLayout.CENTER);
+        mainFrame.getMainPanel().add(outputPanel, BorderLayout.CENTER);
         mainFrame.getMainPanel().add(logScrollPane, BorderLayout.PAGE_END);
         
-        openButtonTransfo.setVisible(false);
-        transfoEnable.setVisible(false);
+        openButtonTransfo.setVisible(false); //TODO remove deprecated
+//        transfoEnable.setVisible(false);
         
 		// create and load default properties
 		cp = new Properties();
 		FileInputStream in;
 		try {
-			in = new FileInputStream("options.cfg");
+			in = new FileInputStream(System.getProperty("user.home") + "\\MFIoptions.cfg");
 			cp.load(in);
 			in.close();
 			log.append("Config file loaded." + newline);
 			
 			String tfURL = cp.getProperty("transfofile", null);
 			String cfURL = cp.getProperty("contourfile", null);
+			String mfURL = cp.getProperty("calcsfile", null);
+			String wsURL = cp.getProperty("workspace", null);
+			
+			outputLocation.setText(cp.getProperty("outputLocation", System.getProperty("user.home") + "\\Datasheet.xlsx"));
 			
 			//Open tranfofile
 			if (tfURL != null) {
@@ -190,14 +226,30 @@ public class Prestart extends PluginActionable
 				channelFile = new File(cfURL);
 				if (channelFile == null) {log.append("unable to open contour file" + newline);}
 					else{log.append("Opening: " + channelFile.getName() + "." + newline);}
+			}			
+			//Open calcsfile
+			if (mfURL != null) {
+				calcsFile = new File(mfURL);
+				if (calcsFile == null) {log.append("unable to open calcs file" + newline);}
+					else{log.append("Opening: " + calcsFile.getName() + "." + newline);}
 			}
+			
 			offlineBool = Boolean.parseBoolean(cp.getProperty("offline", "false"));
 			transformEnabled = Boolean.parseBoolean(cp.getProperty("transform", "false"));
+//			mpBool = Boolean.parseBoolean(cp.getProperty("multipos", "true")); //Deprecated, always true
+			calcBool = Boolean.parseBoolean(cp.getProperty("customcalcs", "false"));
+			wsBool = Boolean.parseBoolean(cp.getProperty("workspace", "false"));
 			
 			log.append("Offline set to " + String.valueOf(offlineBool) + newline);
 			offlineCheckBox.setSelected(offlineBool);
 			log.append("Transform set to " + String.valueOf(transformEnabled) + newline);
 			transfoEnable.setSelected(transformEnabled);
+//			log.append("MultiPos set to " + String.valueOf(mpBool) + newline);
+//			mpCheckBox.setSelected(mpBool); //Deprecated, always true
+			log.append("CustomCalcs set to " + String.valueOf(calcBool) + newline);
+			calcCheckBox.setSelected(calcBool);
+			log.append("Workspace set to " + String.valueOf(wsBool) + newline);
+			wsEnable.setSelected(wsBool);
 			//check here for previous channel comparison settings
 			log.append("Previous channel settings primed." + newline);
 			
@@ -207,26 +259,6 @@ public class Prestart extends PluginActionable
 		}
 		
 		ReadyCheck();
-		
-		/*
-		 * Planned stuff to have in options file
-		 * 	= Offline checkbox
-		 *  = Transform checkbox + transfofile
-		 *  = contour file
-		 *  
-		 *  = excel template
-		 *  
-		 *  = workbook save location
-		 *  = workbook naming
-		 *  
-		 *  = settings for first and so forth ROI drawn
-		 *  
-		 * 	= background correction
-		 *  = flat-fielding
-		 *  = other calculations
-		 *  
-		 */
-   
 
         //define action to do when OK button is pressed
         mainFrame.setOkAction(new ActionListener()
@@ -234,63 +266,98 @@ public class Prestart extends PluginActionable
             @Override
             public void actionPerformed(ActionEvent e) //On OK click
             {
-               // get selected sequence
+            	System.out.println("Prestart finishing");
+               // Get selected sequence
                sequence = mainFrame.getSequence();
-
-               //remove ROI and load contour ROI from channelFile
-               sequence.removeAllROI();
-               if(LoadRois(channelFile,sequence)) { log.append("Loaded ROIs from " + channelFile.getName() + newline);}
-               else	{MessageDialog.showDialog("LoadRois failed"); return;}
-               //Create Excel WB
+               sequences = Icy.getMainInterface().getSequences();
+               
+               for (Sequence sequence: sequences) {
+            	   // Remove ROI and load contour ROI from channelFile
+	               sequence.removeAllROI();
+	               if(LoadRois(channelFile,sequence)) { log.append("Loaded ROIs from " + channelFile.getName() + newline);}
+	               else	{MessageDialog.showDialog("LoadRois failed"); return;}	               
+               }
+               
+               JInternalFrame[] frames = Icy.getMainInterface().getDesktopPane().getAllFrames();
+               for (int i = 0; i < frames.length; i++) {
+            	   if (frames[i].isIconifiable()) {
+            		   Icy.getMainInterface().getDesktopPane().getDesktopManager().iconifyFrame(frames[i]);
+            	   }
+               }
+               
+               // Get MultiPos marked positions
+               if (mpBool && !offlineBool) {
+	    			try {
+	    		   		mStudio = MicroManager.getMMStudio();
+						posList = mStudio.getPositionList();
+					} catch (Exception e4) {
+						System.out.println("No MM detected");
+						MessageDialog.showDialog("Micro-Manager must be running to use multiple positions");
+						return;
+					}
+               }
+               
+               // Create Excel backup
+               File f = new File(outputLocation.getText());
+               if(f.exists() && !f.isDirectory()) { 
+            	   //TODO Finish backup thing
+               }
+               
+    			// Create Excel WB
 				try {
-					wbc = new CreateWorkBook();
+					wbc = new CreateWorkBook(outputLocation.getText());
 					System.out.println("WB created");
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
-				//Create Splitter thread
+				// Find Corners
+				if (transformEnabled) {
+					CornerFinder CF = new CornerFinder();
+					allCorners = CF.Aktivat(channelFile);
+				}
+				
+				// Create Splitter object
 	       		try {
-					S1 = new Splitter(sequence, transfoFile);
+					S1 = new Splitter(sequences, allCorners);
 				} catch (InterruptedException e3) {
 					e3.printStackTrace();
 				}
 	
-	    		// Split the image
-	    		try {
-	    			if(!Prestart.pause) {
-	    				S1.run(sequence.getLastImage(), transfoFile);
-	    			}
-				} catch (InvocationTargetException | InterruptedException e2) {
-					e2.printStackTrace();
-				}
+	    		// Create Startup interface
+    			if(!pause) {
+    				try {
+						S1.CreateSU(calcsFile);
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+    			}
 	    		
-	    		//Start MM listener if online
+	    		// Start MM listener if online
 	    		if (offlineBool == false) {
 	    			try {
-	    	    MicroManager.addAcquisitionListener(Prestart.this);
+			    	    MicroManager.addAcquisitionListener(Prestart.this);
+			    		QR = new Queuer(); 		
 	    			} catch (Exception e6){
 	    				e6.printStackTrace();
 	    				MessageDialog.showDialog("You chose online, but MicroManager is not running!");
-	    				ExitThis();
-	    				//TODO: make it properly exit
-	    			}
-	    			
+	    				return;
+	    			}	    			
 	    		} else { 	    		//Offline Run:
 					try {
 						RunOffline();
 					} catch (InvocationTargetException | InterruptedException e1) {
 						e1.printStackTrace();
 					}
-	    		}
+	    		} 
             }
         });
 
         // define if the frame should be closed after OK action is done (default = true)
         mainFrame.setCloseAfterAction(true);
+        
     }
 
-    public void actionPerformed(ActionEvent e) {
-
+    public void actionPerformed(ActionEvent e) { 	
         //Handle open button action.
         if (e.getSource() == openButtonChannel) {
             int returnVal = fc.showOpenDialog(fc);
@@ -317,25 +384,61 @@ public class Prestart extends PluginActionable
             }
             log.setCaretPosition(log.getDocument().getLength());
             
+        //Handle calcs file open button action.
+        } else if (e.getSource() == calcsButton) {
+            int returnVal = fc.showOpenDialog(fc);
 
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+                calcsFile = fc.getSelectedFile();
+                //open the file
+                log.append("Opening: " + calcsFile.getName() + "." + newline);
+            } else {
+                log.append("Open command cancelled by user." + newline);
+            }
+            log.setCaretPosition(log.getDocument().getLength());
+            
+            
+            
         //Handle save button action.
         } else if (e.getSource() == saveButton) {
         	cp.setProperty("offline", String.valueOf(offlineBool));
         	cp.setProperty("transform", String.valueOf(transformEnabled));
+        	//cp.setProperty("multipos", String.valueOf(mpBool)); //Deprecated, always true
+        	cp.setProperty("customcalcs", String.valueOf(calcBool));
+        	cp.setProperty("workspace", String.valueOf(wsBool));
+
+        	cp.setProperty("outputLocation", outputLocation.getText());
         	if (transfoFile != null) {cp.setProperty("transfofile", transfoFile.getPath());}
         		//else {log.append("No transformation file selected." + newline);} 
         	if (channelFile != null) {cp.setProperty("contourfile", channelFile.getPath());}
     			//else {log.append("No contour file selected." + newline);} 
-
+        	if (calcsFile != null) {cp.setProperty("calcsfile", calcsFile.getPath());}
+    			//else {log.append("No calcs file selected." + newline);} 
+        	//TODO: add a safe go-on without calcs file or a checkbox for calcsenabled
         	try {
-				cp.store(new FileOutputStream("options.cfg"), null);
-	            log.append("Saving procedure as: options.cfg" + newline);
+				cp.store(new FileOutputStream(System.getProperty("user.home") + "\\MFIoptions.cfg"), null);
+	            log.append("Saving procedure as: " + System.getProperty("user.home") + "\\MFIoptions.cfg" + newline);
 			} catch (IOException e1) {
 				e1.printStackTrace();
 				log.append("Save failed!" + newline);
 			}
-
-        }              
+        	
+        //Handle open button action.
+        } else if (e.getSource() == browseButton) {
+        	JFileChooser ch = new JFileChooser();
+        	ch.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+            int returnVal = ch.showOpenDialog(ch);
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+                File file = ch.getSelectedFile();
+                if (file.isDirectory()) { outputLocation.setText(file.getAbsolutePath() + "\\" + "Datasheet.xlsx");}
+                else {outputLocation.setText(file.getAbsolutePath());}
+                log.append("Saving output under: " + outputLocation.getText() + newline);
+            } else {
+                log.append("Browse command cancelled by user." + newline);
+            }
+        }
+        
+        
         ReadyCheck(); //Check if all files and selections are made, enable ok button if they are
     }
     /** Returns an ImageIcon, or null if the path was invalid. */
@@ -359,7 +462,7 @@ public class Prestart extends PluginActionable
         //mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //Add content to the window.
-    	addIcyFrame(mainFrame);
+    	mainFrame.addToDesktopPane();
         //Display the window.
         mainFrame.pack();
         mainFrame.setVisible(true);
@@ -412,14 +515,14 @@ public class Prestart extends PluginActionable
     public void run() {
         //Schedule a job for the event dispatch thread:
         //creating and showing this application's GUI.
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
+//        SwingUtilities.invokeLater(new Runnable() {
+//            public void run() {
                 //Turn off metal's use of bold fonts
                 UIManager.put("swing.boldMetal", Boolean.FALSE); 
                 createAndShowGUI();
             }
-        });
-    }
+//        });
+//    }
 
     public void ReadyCheck() {
     	if (channelFile != null) {// && transfoFile != null) {
@@ -429,29 +532,40 @@ public class Prestart extends PluginActionable
     
 	@Override
 	public void acqImgReveived(TaggedImage image) {
-		System.out.println("img reveived");
+		System.out.println("img reveived ");
+		String pos;    
+		try {
+			pos = image.tags.getString("PositionName");
+	    	System.out.println(newline + "current pos: " + image.tags.get("PositionName"));
+		} catch (JSONException e1) {
+			System.out.println("Could not get name, setting to Pos0"); //TODO triggers when multifret with one pos
+			if (mpBool) {
+				e1.printStackTrace();			
+				return;
+			} else {pos = "Pos0";}
+		}
+		
 		if (startTime == 0) {
 			startTime = System.nanoTime();
 	 	    System.out.println("Start time = " + startTime);
-		}
-		if (exit == true ) {
-			System.out.println("img reveived exit");
-			MicroManager.removeAcquisitionListener(Prestart.this);
-			return;
-		} System.out.println(pause);
+		}	
+
 		if (pause == false) {
 			System.out.println("img reveived run");
-			AcquiredObject acqObj = new AcquiredObject(sequence.getLastImage(),System.nanoTime());
-			//add to queue TODO: Here we need to decide which queue to put this in based on position.
-			QR.QueueUp(acqObj); //TODO: what'd happen if you went forward with taggedimage instead?
-			//notify queue
-			try {
-				QR.RunQueue();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			for (Sequence z: sequences) {
+				if (z.getName().contains("Acquisition") && z.getName().contains(" - " + pos + " - ")) {
+					System.out.println("AcqObj made, pos: " + pos);
+					AcquiredObject acqObj = new AcquiredObject(z.getLastImage(),System.nanoTime(),pos);
+					QR.QueueUp(acqObj);					
+					//notify queue
+					try {
+						QR.RunQueue();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
 			}
-		}
-		System.out.println("S1 ran, invokelater workd");
+		} 
 	}
 
 	@Override
@@ -467,21 +581,60 @@ public class Prestart extends PluginActionable
 	public void RunOffline() throws InvocationTargetException, InterruptedException {
 		startTime = System.nanoTime();
  	    System.out.println("Start time = " + startTime);
+		QR = new Queuer(); 		
+		if (!mpBool) {
+			System.out.println("Offline Single run");
+			for (IcyBufferedImage img : sequence.getAllImage()) {
+				AcquiredObject AO = new AcquiredObject(img,System.nanoTime(),"Pos0");
+				QR.QueueUp(AO);
+			}
+		} else {
+			System.out.println("Offline MP run");
+			for (Sequence s : sequences) {
+				System.out.println("Queueing " + s.getName());
+				for (IcyBufferedImage img : s.getAllImage()) {
+					AcquiredObject AO = new AcquiredObject(img,System.nanoTime(),s.getName());
+					QR.QueueUp(AO);
+				}
+			}				
+		}
+		
+		try {
+			QR.RunQueue();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	//TODO:this
+	public void RunOfflineMP() throws InvocationTargetException, InterruptedException {
+		startTime = System.nanoTime();
+ 	    System.out.println("Start time = " + startTime);
 		for (IcyBufferedImage img : sequence.getAllImage()) {
 			AcquiredObject AO = new AcquiredObject(img,System.nanoTime());
-			QR.QueueUp(AO); //TODO: what'd happen if you went forward with taggedimage instead?
+			QR.QueueUp(AO); 
 		}
 	}
 	
-	public static void ExitThis() {
-		exit = true;
+	public void ExitThis() {
+		System.out.println("img reveived exit");
+		if (!offlineBool) {
+			MicroManager.removeAcquisitionListener(Prestart.this);
+		}
+		//TODO temporary troubleshooting outs
+		System.out.println("PS1");
 		mainFrame.removeAll();
+		//TODO temporary troubleshooting outs
+		System.out.println("PS2");
 		mainFrame.dispose();
+		//TODO temporary troubleshooting outs
+		System.out.println("PS3");
 	}
 
 	@Override
 	public void itemStateChanged(ItemEvent e) {
-		// Checkbox handler
+		// Checkbox handlers
 		Object source = e.getItemSelectable();
 		// TransfoEnable checkbox:
 		if (source == transfoEnable && e.getStateChange() == ItemEvent.DESELECTED) {
@@ -491,16 +644,28 @@ public class Prestart extends PluginActionable
 	    	openButtonTransfo.setEnabled(true);
 	    	transformEnabled = true;
 	    }		
-		
+		// Offline checkbox:
 		if (source == offlineCheckBox && e.getStateChange() == ItemEvent.DESELECTED) {
 			offlineCheckBox.setEnabled(false);
 	    	offlineBool = false;
 	    } else if (source == offlineCheckBox && e.getStateChange() == ItemEvent.SELECTED) {
 	    	offlineCheckBox.setEnabled(true);
 	    	offlineBool = true;
-	    }		
+	    }				
+    	// Multipos checkbox:
+//    	if (e.getSource() == mpCheckBox) {    	
+//    		mpBool = true; //Deprecated, always true.
+//    		//TODO: remove sequence box
+//    	}
+    	// CustomCalc checkbox:
+    	if (e.getSource() == calcCheckBox) {    	
+    		calcBool = calcCheckBox.isSelected();
+    	}    	
+    	// Workspace checkbox:
+    	if (e.getSource() == wsEnable) {    	
+    		wsBool = wsEnable.isSelected();
+    	}
 		
 	}
-	
 }
 

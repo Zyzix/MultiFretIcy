@@ -1,4 +1,4 @@
-package plugins.masoud.multifreticy;
+package plugins.MasoudR.multifreticy.DataObjects;
 
 import java.awt.Point;
 import java.awt.Rectangle;

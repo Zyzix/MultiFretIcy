@@ -1,4 +1,4 @@
-package plugins.masoud.multifreticy;
+package plugins.MasoudR.multifreticy.DataObjects;
 
 public class MyWaitNotify{
 
