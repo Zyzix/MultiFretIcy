@@ -32,31 +32,50 @@
 
 package plugins.MasoudR.multifreticy.Main;
 
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
+
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
+
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.micromanager.api.PositionList;
 import org.micromanager.MMStudio;
+import org.micromanager.api.PositionList;
 import org.micromanager.api.SequenceSettings;
 import org.w3c.dom.Document;
 
-import icy.sequence.Sequence;
 import icy.gui.dialog.MessageDialog;
 import icy.gui.frame.sequence.SequenceActionFrame;
 import icy.image.IcyBufferedImage;
 import icy.main.Icy;
 import icy.roi.ROI;
-
+import icy.sequence.Sequence;
 import icy.sequence.edit.ROIAddsSequenceEdit;
 import icy.util.XMLUtil;
 import mmcorej.TaggedImage;
+import plugins.MasoudR.multifreticy.MultiFretIcy;
 import plugins.MasoudR.multifreticy.DataObjects.AcquiredObject;
 import plugins.MasoudR.multifreticy.DataObjects.MyCoordinates;
 import plugins.tprovoost.Microscopy.MicroManager.MicroManager;
@@ -71,7 +90,7 @@ import plugins.tprovoost.Microscopy.MicroManager.event.AcquisitionListener;
 public class Prestart  
                              implements ActionListener, AcquisitionListener, ItemListener {
 	
-    JButton 							calcsButton, browseButton, openButtonTransfo, openButtonChannel, saveButton;
+    JButton 							calcsButton, browseButton, openButtonTransfo, openButtonChannel, saveButton, detectorButton;
     JCheckBox							transfoEnable, offlineCheckBox, calcCheckBox, wsEnable;
     JTextArea 							log;
     JTextField							outputLocation;
@@ -85,9 +104,10 @@ public class Prestart
 	public ArrayList<Sequence>			sequences;
 	
     private final String 				newline = "\n";
-    public Splitter 					S1;
-    public Queuer						QR;
-    public  SequenceActionFrame 		mainFrame;
+    public 	Splitter 					S1;
+    public 	Queuer						QR;
+    public 	SequenceActionFrame 		mainFrame;
+    public 	JFrame						detectorPanel;
     public  boolean 					exit, pause, transformEnabled, offlineBool, mpBool, calcBool, wsBool;
     public  CreateWorkBook 				wbc;
     
@@ -95,6 +115,7 @@ public class Prestart
 	public PositionList 				posList;
 	
 	private ArrayList<ArrayList<MyCoordinates>> allCorners = new ArrayList<ArrayList<MyCoordinates>>();
+	private ArrayList<AcquiredObject> lastBatch = new ArrayList<AcquiredObject>();
 
 	
 	public Prestart() { 
@@ -152,6 +173,9 @@ public class Prestart
         //Create a file chooser
         fc = new JFileChooser();
 
+        detectorButton = new JButton("Detector");
+        detectorButton.addActionListener(this);
+        
         openButtonChannel = new JButton("Select Contour-file",
                                  createImageIcon("images/Open16.gif"));
         openButtonChannel.addActionListener(this);
@@ -180,6 +204,7 @@ public class Prestart
         
         //For layout purposes, put the buttons in a separate panel
         JPanel buttonPanel = new JPanel(); //use FlowLayout
+        buttonPanel.add(detectorButton);
         buttonPanel.add(openButtonChannel);
         buttonPanel.add(calcsButton);
         buttonPanel.add(openButtonTransfo);
@@ -258,7 +283,7 @@ public class Prestart
 			log.append("unable to open config file" + newline);
 		}
 		
-		ReadyCheck();
+		readyCheck();
 
         //define action to do when OK button is pressed
         mainFrame.setOkAction(new ActionListener()
@@ -268,13 +293,13 @@ public class Prestart
             {
             	System.out.println("Prestart finishing");
                // Get selected sequence
-               sequence = mainFrame.getSequence();
+               sequence = mainFrame.getSequence(); //TODO:? mainframe is just hte settings window
                sequences = Icy.getMainInterface().getSequences();
                
                for (Sequence sequence: sequences) {
             	   // Remove ROI and load contour ROI from channelFile
 	               sequence.removeAllROI();
-	               if(LoadRois(channelFile,sequence)) { log.append("Loaded ROIs from " + channelFile.getName() + newline);}
+	               if(loadRois(channelFile,sequence)) { log.append("Loaded ROIs from " + channelFile.getName() + newline);}
 	               else	{MessageDialog.showDialog("LoadRois failed"); return;}	               
                }
                
@@ -344,7 +369,7 @@ public class Prestart
 	    			}	    			
 	    		} else { 	    		//Offline Run:
 					try {
-						RunOffline();
+						runOffline();
 					} catch (InvocationTargetException | InterruptedException e1) {
 						e1.printStackTrace();
 					}
@@ -371,6 +396,16 @@ public class Prestart
             }
             log.setCaretPosition(log.getDocument().getLength());}
             
+        //Handle test button action.
+        else if (e.getSource() == detectorButton) {
+        	try {
+				Detector dT = new Detector("Detector");
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+        }
+        
         //Handle open button action.
             else if (e.getSource() == openButtonTransfo) {
             int returnVal = fc.showOpenDialog(fc);
@@ -439,7 +474,7 @@ public class Prestart
         }
         
         
-        ReadyCheck(); //Check if all files and selections are made, enable ok button if they are
+        readyCheck(); //Check if all files and selections are made, enable ok button if they are
     }
     /** Returns an ImageIcon, or null if the path was invalid. */
     protected static ImageIcon createImageIcon(String path) {
@@ -469,7 +504,7 @@ public class Prestart
     }
 
     //load ROI from file
-    public boolean LoadRois(File file, Sequence seq)
+    public boolean loadRois(File file, Sequence seq)
     {
         if ((file != null) && (seq != null))
         {
@@ -524,7 +559,7 @@ public class Prestart
 //        });
 //    }
 
-    public void ReadyCheck() {
+    public void readyCheck() {
     	if (channelFile != null) {// && transfoFile != null) {
     		mainFrame.getOkBtn().setEnabled(true);
     	}
@@ -551,12 +586,22 @@ public class Prestart
 		}	
 
 		if (pause == false) {
+			for (AcquiredObject ao : lastBatch) {
+				if (ao.position.equals(pos)) {
+					MultiFretIcy.PS.S1.SU1.lastBatch = lastBatch;
+					lastBatch = new ArrayList<AcquiredObject>();
+					break;
+				}
+			}
+			
+			
 			System.out.println("img reveived run");
 			for (Sequence z: sequences) {
 				if (z.getName().contains("Acquisition") && z.getName().contains(" - " + pos + " - ")) {
 					System.out.println("AcqObj made, pos: " + pos);
 					AcquiredObject acqObj = new AcquiredObject(z.getLastImage(),System.nanoTime(),pos);
-					QR.QueueUp(acqObj);					
+					lastBatch.add(acqObj);
+					QR.QueueUp(acqObj);										
 					//notify queue
 					try {
 						QR.RunQueue();
@@ -578,7 +623,7 @@ public class Prestart
 		
 	}
 	
-	public void RunOffline() throws InvocationTargetException, InterruptedException {
+	public void runOffline() throws InvocationTargetException, InterruptedException {
 		startTime = System.nanoTime();
  	    System.out.println("Start time = " + startTime);
 		QR = new Queuer(); 		
@@ -608,7 +653,7 @@ public class Prestart
 	}
 	
 	//TODO:this
-	public void RunOfflineMP() throws InvocationTargetException, InterruptedException {
+	public void runOfflineMP() throws InvocationTargetException, InterruptedException {
 		startTime = System.nanoTime();
  	    System.out.println("Start time = " + startTime);
 		for (IcyBufferedImage img : sequence.getAllImage()) {
@@ -617,7 +662,7 @@ public class Prestart
 		}
 	}
 	
-	public void ExitThis() {
+	public void exitThis() {
 		System.out.println("img reveived exit");
 		if (!offlineBool) {
 			MicroManager.removeAcquisitionListener(Prestart.this);

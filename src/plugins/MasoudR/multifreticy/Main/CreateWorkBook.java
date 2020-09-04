@@ -40,7 +40,6 @@ import org.apache.poi.xssf.usermodel.charts.XSSFValueAxis;
 import org.jfree.data.xy.XYSeries;
 
 import icy.main.Icy;
-import loci.poi.hssf.util.CellReference;
 import plugins.MasoudR.multifreticy.MultiFretIcy;
 import plugins.MasoudR.multifreticy.DataObjects.VarIntRoi;
 

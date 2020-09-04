@@ -35,7 +35,6 @@ import java.awt.Desktop;
 import java.awt.Font;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -158,11 +157,13 @@ public class MultiFretIcy extends PluginActionable {
 				Icy.getMainInterface().getDesktopPane().getBounds().getWidth(),
 				Icy.getMainInterface().getDesktopPane().getBounds().getHeight());
 		
-		System.out.println("###### MFI Version 0.0.4.0 ######");
-		new ToolTipFrame("<html> <body bgcolor=\"#0036d8\"> <font color=\"#f9f1a4\"><b>Running MFI version 0.0.4.0</b></font><br>"
+		System.out.println("###### MFI Version 0.0.4.1 ######");
+		new ToolTipFrame("<html> <body bgcolor=\"#0036d8\"> <font color=\"#f9f1a4\"><b>Running MFI version 0.0.4.1</b></font><br>"
 				+ "<font color=\"#14ff0c\"><sup>28/06/2020</sup>Changelog for this version:"
 				+ "<br>•Fixed an issue with the template function"
 				+ "<br>•Data logs now contain milestone information"
+				+ "<br>•Milestones can now be created before 'Start' is clicked, during the ROI drawing stage"
+				+ "<br>•Graphs aesthetic has been updated, and should pick axis AutoRange in a more desirable fashion"
 				+ "<br>•Deprecated Multipos switch removed"
 				+ "<br>•Minor performance tweaks"
 				+ "<br>•Exit prompt added, allowing users to choose how to end the experiment"				

@@ -1,19 +1,14 @@
 package plugins.MasoudR.multifreticy.Main;
 
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
-import java.beans.PropertyVetoException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
-import javax.swing.JDesktopPane;
-import javax.swing.JInternalFrame;
 import javax.swing.SwingUtilities;
 
 import icy.gui.dialog.MessageDialog;
@@ -21,7 +16,6 @@ import icy.gui.main.MainInterface;
 import icy.main.Icy;
 import plugins.MasoudR.multifreticy.MultiFretIcy;
 import plugins.MasoudR.multifreticy.DataObjects.AcquiredObject;
-import plugins.MasoudR.multifreticy.DataObjects.MyCoordinates;
 
 public class QueueThread extends Thread {
 	private int counter;
@@ -178,7 +172,7 @@ public class QueueThread extends Thread {
 		System.out.println("QT6");
 		//Stopping every thread
 		for(Threading aThread : MultiFretIcy.PS.S1.SU1.threads) {
-			aThread.ExitThis();
+			aThread.exitThis();
 			System.out.println("Exited thread " + aThread.getName());
 			//TODO temporary troubleshooting outs
 			System.out.println("QT7");
@@ -186,7 +180,7 @@ public class QueueThread extends Thread {
 		MultiFretIcy.PS.S1.ExitThis();
 		//TODO temporary troubleshooting outs
 		System.out.println("QT8");
-		MultiFretIcy.PS.ExitThis();
+		MultiFretIcy.PS.exitThis();
 		//TODO temporary troubleshooting outs
 		System.out.println("QT9");
 		try {
