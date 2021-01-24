@@ -4,7 +4,6 @@ import java.awt.Component;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 
@@ -20,14 +19,12 @@ import plugins.MasoudR.multifreticy.DataObjects.AcquiredObject;
 public class QueueThread extends Thread {
 	private int counter;
 	private boolean exit;
-	private File transfoFile;
 	private boolean first = true;
 
 	
 	public QueueThread() {
 		counter = 1;
 		exit = false;
-		transfoFile = MultiFretIcy.PS.transfoFile;
 	}
 	
 	// This will run through accumulated images and initiate split+analysis for them.
@@ -114,6 +111,7 @@ public class QueueThread extends Thread {
 					System.out.println("conqsnam: " + MultiFretIcy.PS.S1.concSeqList.get(i).getName());
 					int j = 0;
 					for (Threading threed : MultiFretIcy.PS.S1.SU1.threads) {	
+						System.out.println(threed.getName());
 						System.out.println("threadnam: " + MultiFretIcy.PS.S1.SU1.threads.get(j).pos);
 						System.out.println("chartnam: " + MultiFretIcy.PS.S1.SU1.threads.get(j).chartHolder.getName());
 						if (MultiFretIcy.PS.S1.SU1.threads.get(j).chartHolder.getName().equals(MultiFretIcy.PS.S1.concSeqList.get(i).getName())) {
@@ -138,11 +136,7 @@ public class QueueThread extends Thread {
 	}
 	
 	public void ExitThis() {
-		//TODO temporary troubleshooting outs
-		System.out.println("QT1");
 		exit = true;		
-		//TODO temporary troubleshooting outs
-		System.out.println("QT2");
 	}
 	
 	public void finaliseThreads() {
@@ -154,8 +148,7 @@ public class QueueThread extends Thread {
 		//captureComponent(MI.getMainFrame()); 
 		//Create internal pane screenshot
 		byte[] sf = null;
-		//TODO temporary troubleshooting outs
-		System.out.println("QT4");
+
 		try {
 			if (!MultiFretIcy.PS.wsBool) {
 			sf = captureView(MI.getDesktopPane());
@@ -164,30 +157,21 @@ public class QueueThread extends Thread {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}	
-		//TODO temporary troubleshooting outs
-		System.out.println("QT5");
+
 		//Remove concSequences
 		MultiFretIcy.PS.S1.SU1.ExitThis();
-		//TODO temporary troubleshooting outs
-		System.out.println("QT6");
+
 		//Stopping every thread
 		for(Threading aThread : MultiFretIcy.PS.S1.SU1.threads) {
 			aThread.exitThis();
 			System.out.println("Exited thread " + aThread.getName());
-			//TODO temporary troubleshooting outs
-			System.out.println("QT7");
+
 		}
 		MultiFretIcy.PS.S1.ExitThis();
-		//TODO temporary troubleshooting outs
-		System.out.println("QT8");
 		MultiFretIcy.PS.exitThis();
-		//TODO temporary troubleshooting outs
-		System.out.println("QT9");
 		try {
 			System.out.println("###Saving####################");
 			MultiFretIcy.PS.wbc.SaveAndClose(sf);
-			//TODO temporary troubleshooting outs
-			System.out.println("QT10");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -199,11 +183,11 @@ public class QueueThread extends Thread {
 		 
 	        String format = "png";
 	        byte[] bytes = null;
-			//TODO temporary troubleshooting outs
-			System.out.println("QT11");
+	        
 		    BufferedImage captureImage =
 	                new BufferedImage(rect.width, rect.height,
 	                                    BufferedImage.TYPE_INT_ARGB);	
+		    
 	        final Runnable doScreenshot = new Runnable() {
 	             public void run() {
 	            	 component.paint(captureImage.createGraphics());
@@ -211,15 +195,10 @@ public class QueueThread extends Thread {
 	         };
 		    
 		    SwingUtilities.invokeAndWait(doScreenshot); 
-			//TODO temporary troubleshooting outs
-			System.out.println("QT12");
-
         	ByteArrayOutputStream baos = new ByteArrayOutputStream();
         	ImageIO.write(captureImage, format, baos);
         	bytes = baos.toByteArray();
-			//TODO temporary troubleshooting outs
-			System.out.println("QT13");			   
-	        System.out.printf("The screenshot of %s was saved under " + System.getProperty("user.dir"), component.getName());
+		   
 	    return bytes;
 	}
 }

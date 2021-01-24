@@ -17,12 +17,13 @@ public class CustomCalc {
 	public CustomCalc(File f) throws IOException {
 		BufferedReader r = new BufferedReader(new FileReader(f));
 		String line = r.readLine();
+		System.out.println("Reading CustomCalc file: " + f.getName());
 		
 		int num = 0;
 		boolean[] checks = {false, false, false};
 			
-		while (line != null) {
-			if (line.matches("^>[^>]*") && !checks[0]) {
+		while (line != null) { 
+			if (line.matches("^>[^>]*") && !checks[0]) { // Get >header
 				checks[0] = true;
 				names.add(num,line.substring(line.lastIndexOf(">")+1));
 			} else if(line.matches("^>[^>]*")) {
@@ -30,7 +31,7 @@ public class CustomCalc {
 				continue;
 			}
 			
-			if (line.matches("^>>[^>]*") && !checks[1]) {
+			if (line.matches("^>>[^>]*") && !checks[1]) { // Get >>arguments (comma separated)
 				checks[1] = true;
 				String[] args = line.substring(line.lastIndexOf(">")+1).split(",");	
 				for (int x = 0; x < args.length; x++) {
@@ -42,7 +43,7 @@ public class CustomCalc {
 				continue;
 			}
 			
-			if (line.matches("^>>>[^>]*") && !checks[2]) {
+			if (line.matches("^>>>[^>]*") && !checks[2]) { // get >>>formula
 				checks[2] = true;
 				formulae.add(num,line.substring(line.lastIndexOf(">")+1));
 			} else if(line.matches("^>>>[^>]*")) {

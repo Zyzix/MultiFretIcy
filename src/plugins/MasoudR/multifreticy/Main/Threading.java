@@ -27,7 +27,6 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.annotations.XYPointerAnnotation;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -340,42 +339,75 @@ class Threading {
    
 			   ArrayList<Argument> argayList = margsGetter(calcArgs.get(customCalcs.GetName(n)));
 			   //can add new arguments from main/bg here
-			   Argument[] d = argayList.toArray(new Argument[argayList.size()]);
+
+			   ArrayList<Argument> aList = new ArrayList<Argument>();
 			   
-			   for (int k = 0; k < d.length; k++) {
-				   System.out.printf("%narg %s has a value of %s%n",d[k].getArgumentName(),d[k].getArgumentValue());
+			   for (Argument d : argayList) {
+				   System.out.printf("%narg %s has a value of %s%n",d.getArgumentName(),d.getArgumentValue());
+				   aList.add(new Argument(d.getArgumentName(),d.getArgumentValue()));
 			   }
 			   
-			   Expression e = new Expression(cleanFormula(customCalcs.GetFormula(n)), d);
+
+			   
+			   Expression e = new Expression(cleanFormula(customCalcs.GetFormula(n)), aList.toArray(new Argument[0]));
 			   mXparser.consolePrintln(e.getExpressionString() + " = " + e.calculate());
 			   return e.calculate();
 	   }
 	   
 	   //Remove brackets from formula
 	   public String cleanFormula(String s) {
-		   String regex = "([^>>>].*?)(\\[\\w+\\])([^A-Za-z\\n]*)";
-	       Pattern pattern = Pattern.compile(regex);
-	       Matcher matcher = pattern.matcher(s);
-	       
-	       String fom = "";
-	        while (matcher.find()) {
-	            for (int i = 1; i <= matcher.groupCount(); i=i+2) {
-	            	if (!matcher.group(i).contains("[")) {         		
-	            		fom = fom + matcher.group(i);	
-    	         	}    	
-	            }
-	        }       
-		   System.out.printf("Detected Formula: %n%s%n",fom);   
-		   return fom;
+		   System.out.println("Cleaning formula: " + s);
+//		   s = s.split("(>>>)")[1];
+		   
+		   String regex = "(\\w*)\\[(\\w*?)\\]";
+		   Pattern pattern = Pattern.compile(regex);
+		   Matcher matcher = pattern.matcher(s);
+ 
+		   int matchCount = 0;
+		   while (matcher.find()) {
+			   matchCount++;
+			   System.out.printf("Match count: %s, Group Zero Text: '%s'%n", matchCount,
+					   matcher.group());
+			   for (int i = 1; i <= matcher.groupCount(); i++) {
+				   System.out.printf("Capture Group Number: %s, Captured Text: '%s'%n", i, matcher.group(i));
+   				}	
+//			   argsList.add(new CcArgs(matcher.group(1),GetChannel(matcher.group(2))));		
+			   s = s.replaceFirst("\\[" + matcher.group(2) + "\\]", String.valueOf(MultiFretIcy.PS.S1.SU1.GetChannel(matcher.group(2))));
+			   
+		   }
+		   
+
+		   
+		   System.out.printf("Detected Formula: %n%s%n",s);   
+		   return s;
 	   }
+	   
+	   
+	   
+//	   public String cleanFormula(String s) {
+//		   String regex = "([^>>>].*?)(\\[\\w+\\])([^A-Za-z\\n]*)";
+//	       Pattern pattern = Pattern.compile(regex);
+//	       Matcher matcher = pattern.matcher(s);
+//	       
+//	       String fom = "";
+//	        while (matcher.find()) {
+//	            for (int i = 1; i <= matcher.groupCount(); i=i+2) {
+//	            	if (!matcher.group(i).contains("[")) {         		
+//	            		fom = fom + matcher.group(i);	
+//    	         	}    	
+//	            }
+//	        }       
+//		   System.out.printf("Detected Formula: %n%s%n",fom);   
+//		   return fom;
+//	   }
 	   
 	   
 		public ArrayList<Argument> margsGetter(ArrayList<CcArgs> arrayList) {
 			ArrayList<Argument> mgl = new ArrayList<Argument>();
 			
 			for(int i = 0; i<arrayList.size(); i++) {
-				System.out.println(concS.getName() + " " + arrayList.get(i).getArgName() + ": " + arrayList.get(i).getValue());
-				mgl.add(new Argument(arrayList.get(i).getArgName(), arrayList.get(i).getValue()));
+				System.out.println(concS.getName() + " " + arrayList.get(i).getArgName()+arrayList.get(i).getChannel() + ": " + arrayList.get(i).getValue());
+				mgl.add(new Argument(arrayList.get(i).getArgName()+arrayList.get(i).getChannel(), arrayList.get(i).getValue()));
 			}
 			return mgl;
 		}
@@ -552,7 +584,8 @@ class Threading {
 	     * @param decimalPlace
 	     * @return
 	     */
-	    public static double round(double d, int decimalPlace) {
+	    @SuppressWarnings("deprecation")
+		public static double round(double d, int decimalPlace) {
 	        BigDecimal bd = new BigDecimal(Double.toString(d));
 	        bd = bd.setScale(decimalPlace, BigDecimal.ROUND_HALF_UP);
 	        System.out.println(bd.doubleValue());

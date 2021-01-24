@@ -33,6 +33,8 @@
 package plugins.MasoudR.multifreticy.Main;
 
 import java.awt.BorderLayout;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -47,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -67,7 +70,7 @@ import org.micromanager.api.SequenceSettings;
 import org.w3c.dom.Document;
 
 import icy.gui.dialog.MessageDialog;
-import icy.gui.frame.sequence.SequenceActionFrame;
+import icy.gui.frame.ActionFrame;
 import icy.image.IcyBufferedImage;
 import icy.main.Icy;
 import icy.roi.ROI;
@@ -75,6 +78,7 @@ import icy.sequence.Sequence;
 import icy.sequence.edit.ROIAddsSequenceEdit;
 import icy.util.XMLUtil;
 import mmcorej.TaggedImage;
+import net.miginfocom.swing.MigLayout;
 import plugins.MasoudR.multifreticy.MultiFretIcy;
 import plugins.MasoudR.multifreticy.DataObjects.AcquiredObject;
 import plugins.MasoudR.multifreticy.DataObjects.MyCoordinates;
@@ -100,13 +104,12 @@ public class Prestart
     
     ArrayList<Thread> 					threads;
 	public long 						startTime;
-	public Sequence 					sequence;
 	public ArrayList<Sequence>			sequences;
 	
     private final String 				newline = "\n";
     public 	Splitter 					S1;
     public 	Queuer						QR;
-    public 	SequenceActionFrame 		mainFrame;
+    public 	ActionFrame 				mainFrame;
     public 	JFrame						detectorPanel;
     public  boolean 					exit, pause, transformEnabled, offlineBool, mpBool, calcBool, wsBool;
     public  CreateWorkBook 				wbc;
@@ -119,12 +122,9 @@ public class Prestart
 
 	
 	public Prestart() { 
-		startTime = 0;
-						
-		sequences = new ArrayList<Sequence>();
-		
-		
-		mainFrame = new SequenceActionFrame("Settings", true);
+		startTime = 0;						
+		sequences = new ArrayList<Sequence>();		
+		mainFrame = new ActionFrame("Settings", true);
 		threads = new ArrayList<Thread>();
 		pause = false;
 		exit = false;
@@ -216,11 +216,12 @@ public class Prestart
         
     	openButtonTransfo.setEnabled(false);
         //Add the buttons and the log to this panel.
-        mainFrame.getMainPanel().add(checkboxPanel, BorderLayout.PAGE_START);
-        mainFrame.getMainPanel().add(buttonPanel, BorderLayout.CENTER);
-        mainFrame.getMainPanel().add(outputPanel, BorderLayout.CENTER);
-        mainFrame.getMainPanel().add(logScrollPane, BorderLayout.PAGE_END);
-        
+    	JPanel settingsPanel = new JPanel(new MigLayout("wrap 1"));
+    	settingsPanel.add(checkboxPanel, "grow");
+    	settingsPanel.add(buttonPanel, "grow");
+    	settingsPanel.add(outputPanel, "grow");
+        settingsPanel.add(logScrollPane, "grow");
+        mainFrame.getMainPanel().add(settingsPanel);
         openButtonTransfo.setVisible(false); //TODO remove deprecated
 //        transfoEnable.setVisible(false);
         
@@ -236,7 +237,6 @@ public class Prestart
 			String tfURL = cp.getProperty("transfofile", null);
 			String cfURL = cp.getProperty("contourfile", null);
 			String mfURL = cp.getProperty("calcsfile", null);
-			String wsURL = cp.getProperty("workspace", null);
 			
 			outputLocation.setText(cp.getProperty("outputLocation", System.getProperty("user.home") + "\\Datasheet.xlsx"));
 			
@@ -293,7 +293,6 @@ public class Prestart
             {
             	System.out.println("Prestart finishing");
                // Get selected sequence
-               sequence = mainFrame.getSequence(); //TODO:? mainframe is just hte settings window
                sequences = Icy.getMainInterface().getSequences();
                
                for (Sequence sequence: sequences) {
@@ -339,6 +338,7 @@ public class Prestart
 				if (transformEnabled) {
 					CornerFinder CF = new CornerFinder();
 					allCorners = CF.Aktivat(channelFile);
+					if (allCorners == null) {return;}
 				}
 				
 				// Create Splitter object
@@ -396,10 +396,10 @@ public class Prestart
             }
             log.setCaretPosition(log.getDocument().getLength());}
             
-        //Handle test button action.
+        //Handle Detector button action.
         else if (e.getSource() == detectorButton) {
         	try {
-				Detector dT = new Detector("Detector");
+				new Detector("Detector");
 			} catch (Exception e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -627,39 +627,20 @@ public class Prestart
 		startTime = System.nanoTime();
  	    System.out.println("Start time = " + startTime);
 		QR = new Queuer(); 		
-		if (!mpBool) {
-			System.out.println("Offline Single run");
-			for (IcyBufferedImage img : sequence.getAllImage()) {
-				AcquiredObject AO = new AcquiredObject(img,System.nanoTime(),"Pos0");
+		System.out.println("Offline MP run");
+		for (Sequence s : sequences) {
+			System.out.println("Queueing " + s.getName());
+			for (IcyBufferedImage img : s.getAllImage()) {
+				AcquiredObject AO = new AcquiredObject(img,System.nanoTime(),s.getName());
 				QR.QueueUp(AO);
 			}
-		} else {
-			System.out.println("Offline MP run");
-			for (Sequence s : sequences) {
-				System.out.println("Queueing " + s.getName());
-				for (IcyBufferedImage img : s.getAllImage()) {
-					AcquiredObject AO = new AcquiredObject(img,System.nanoTime(),s.getName());
-					QR.QueueUp(AO);
-				}
-			}				
-		}
-		
+	}				
 		try {
 			QR.RunQueue();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		
-	}
-	
-	//TODO:this
-	public void runOfflineMP() throws InvocationTargetException, InterruptedException {
-		startTime = System.nanoTime();
- 	    System.out.println("Start time = " + startTime);
-		for (IcyBufferedImage img : sequence.getAllImage()) {
-			AcquiredObject AO = new AcquiredObject(img,System.nanoTime());
-			QR.QueueUp(AO); 
-		}
 	}
 	
 	public void exitThis() {
@@ -697,11 +678,6 @@ public class Prestart
 	    	offlineCheckBox.setEnabled(true);
 	    	offlineBool = true;
 	    }				
-    	// Multipos checkbox:
-//    	if (e.getSource() == mpCheckBox) {    	
-//    		mpBool = true; //Deprecated, always true.
-//    		//TODO: remove sequence box
-//    	}
     	// CustomCalc checkbox:
     	if (e.getSource() == calcCheckBox) {    	
     		calcBool = calcCheckBox.isSelected();

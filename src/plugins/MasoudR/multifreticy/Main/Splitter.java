@@ -37,6 +37,7 @@ public class Splitter {
 	public Sequence justaseq;
 	
 	// get acquired image containing ROIs
+	@SuppressWarnings("deprecation")
 	Splitter (ArrayList<Sequence> acquiredSeqs, ArrayList<ArrayList<MyCoordinates>> allCorners) throws InterruptedException{
 		System.out.println("started S1");
 		justaseq = acquiredSeqs.get(0);

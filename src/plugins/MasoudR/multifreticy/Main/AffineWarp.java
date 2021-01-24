@@ -90,20 +90,22 @@ public BufferedImage GeometricTransforms(ArrayList<MyCoordinates> mc, Sequence s
         dstTri[2] = new Point( 128, 98 );
 //        dstTri[3] = new Point( 0, 98 );
 
-        System.out.println(dstTri[0] + ", " + dstTri[1] + ", " + dstTri[2]);
+        System.out.println("Affine warp origin " + srcTri[0] + ", " + srcTri[1] + ", " + srcTri[2]);
+        System.out.println("Affine warp destination " + dstTri[0] + ", " + dstTri[1] + ", " + dstTri[2]);
         
         Mat warpMat = Imgproc.getAffineTransform( new MatOfPoint2f(srcTri), new MatOfPoint2f(dstTri) );
         Mat warpDst = Mat.zeros( 98, 128, src.type() );
         Imgproc.warpAffine( src, warpDst, warpMat, warpDst.size() );
-        Point center = new Point(warpDst.cols() / 2, warpDst.rows() / 2);
-        double angle = -50.0;
-        double scale = 0.6;
-        Mat rotMat = Imgproc.getRotationMatrix2D( center, angle, scale );
+//        Point center = new Point(warpDst.cols() / 2, warpDst.rows() / 2);
+//        double angle = -50.0;
+//        double scale = 0.6;
+        double angle = getAngle(srcTri);
+        Mat rotMat = Imgproc.getRotationMatrix2D( srcTri[0], angle, 1 );
         Mat warpRotateDst = new Mat();
-//        Imgproc.warpAffine( warpDst, warpRotateDst, rotMat, warpDst.size() );
+        Imgproc.warpAffine( warpDst, warpRotateDst, rotMat, warpDst.size() );
         
         
-        BufferedImage newImg = mat2Img(warpDst,seq.getLastImage());
+        BufferedImage newImg = mat2Img(warpRotateDst,seq.getLastImage());
         return newImg;
 //        HighGui.imshow( "Source image", src );
 //        HighGui.imshow( "Warp", warpDst );
@@ -111,4 +113,23 @@ public BufferedImage GeometricTransforms(ArrayList<MyCoordinates> mc, Sequence s
 //        HighGui.waitKey(0);
 //        System.exit(0);
     }
+
+public double getAngle(Point[] pointArray) {
+	double pointDistance = Math.sqrt(Math.pow(pointArray[1].x - pointArray[0].x,2) + Math.pow(pointArray[1].y + pointArray[0].y,2));
+	int k = 1;
+	for(int i = 2; i < pointArray.length; i++) {
+		double pointDistance2 = Math.sqrt(Math.pow(pointArray[i].x - pointArray[0].x,2) + Math.pow(pointArray[i].y + pointArray[0].y,2));
+		if (pointDistance2 < pointDistance) {pointDistance = pointDistance2; k = i;}
+	}
+	
+	
+	
+	double angle = Math.toDegrees(Math.atan2(pointArray[k].y - pointArray[0].y, pointArray[k].x - pointArray[0].x));
+
+    if(angle < 0){
+        angle += 360;
+    }
+
+    return angle;
+}
 }

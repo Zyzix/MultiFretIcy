@@ -8,21 +8,17 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 
 import icy.gui.frame.IcyInternalFrame;
 
+@SuppressWarnings("serial")
 public class Workspace extends JTabbedPane {
 	  private JPanel grid;
-	  private String text = new String("testing.");
 	  private GridBagConstraints c;
 	  private int num = 1;
 	  private JScrollPane sp;
@@ -55,16 +51,6 @@ public class Workspace extends JTabbedPane {
   }
   
   
-  private JLabel loadImages(String s) throws IOException {
-  //Load Images
-	Image img = ImageIO.read(new File(s));
-	BufferedImage bimg = toBufferedImage(img);		
-	ImageIcon icon1 = new ImageIcon(bimg);
-	JLabel iconholder = new JLabel(icon1);
-
-	return iconholder;
-  }
-    
   public void addComponent(int x, int y, Component comp) throws IOException {
 	  c.gridx = x;
 	  c.gridy = y;

@@ -38,6 +38,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -48,6 +49,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
@@ -57,11 +59,9 @@ import javax.swing.event.ListSelectionListener;
 
 import icy.gui.dialog.MessageDialog;
 import icy.gui.frame.IcyFrame;
-import icy.gui.frame.IcyInternalFrame;
 import icy.gui.viewer.Viewer;
 import icy.image.IcyBufferedImage;
 import icy.main.Icy;
-import icy.roi.BooleanMask2D;
 import icy.roi.ROI;
 import icy.roi.ROI2D;
 import icy.roi.ROI2DRectangle;
@@ -70,7 +70,6 @@ import icy.sequence.SequenceEvent;
 import icy.sequence.SequenceEvent.SequenceEventSourceType;
 import icy.sequence.SequenceEvent.SequenceEventType;
 import icy.sequence.SequenceListener;
-import icy.type.collection.array.Array1DUtil;
 import plugins.MasoudR.multifreticy.MultiFretIcy;
 import plugins.MasoudR.multifreticy.DataObjects.AcquiredObject;
 import plugins.MasoudR.multifreticy.DataObjects.EzVarIntRoi;
@@ -80,13 +79,13 @@ import plugins.MasoudR.multifreticy.DataObjects.MyWaitNotify;
 import plugins.MasoudR.multifreticy.DataObjects.VarIntRoi;
 import plugins.MasoudR.multifreticy.DataObjects.CcArgs;
 import plugins.MasoudR.multifreticy.DataObjects.CustomCalc;
-import plugins.MasoudR.multifreticy.DataObjects.FitVars;
 import plugins.adufour.activecontours.ActiveContours;
 import plugins.adufour.activecontours.ActiveContours.ExportROI;
 import plugins.adufour.activecontours.ActiveContours.ROIType;
 import plugins.adufour.ezplug.EzVarBoolean;
 import plugins.adufour.vars.lang.VarROIArray;
 
+@SuppressWarnings("deprecation")
 public class Startup implements SequenceListener, ActionListener, ItemListener, ListSelectionListener {
 	
 	private IcyFrame			theFrame;
@@ -118,6 +117,9 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 	
 	public JButton 				msButton, startButton, stopButton, saveButton, detectButton, BGdetectButton;
 	private JTextField 			msField, maxIterations;
+	private JRadioButton		detRadioMP;
+	private JRadioButton		detRadioWF;
+	
 	private int 				msInt;
 	JList<String> 				posL;
 	private JPanel 				RPanel;
@@ -199,23 +201,16 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 		
 		
 		JLabel calcsLabel = new JLabel("Background deduction for channel:");	
-		calcsLabel.setName("Corrections");		
-
+		calcsLabel.setName("Corrections");	
 
 		saveButton = new JButton("Save corrections and last ROI channel selection");
 		saveButton.setName("Corrections");
 		saveButton.addActionListener(this);
 				
-		// Create detection options frame components
+		// Create detection options panel component
 		JPanel detSettings = new JPanel();
 		detSettings.setName("Detection");
-		
-		JLabel detLabel = new JLabel("Detector settings:");	
-		detLabel.setName("Detection");	
-		
-		
-		
-		
+
 		// Instructions above the main bit
 		JPanel topLevel = new JPanel();
 		JLabel textinfo = new JLabel("Draw atleast one ROI and a background ROI");
@@ -274,7 +269,7 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 		detectButton = new JButton("Detect");
 		detectButton.addActionListener(this);
 		
-		BGdetectButton = new JButton("Detect");
+		BGdetectButton = new JButton("BGDetect");
 		BGdetectButton.addActionListener(this);
 		
 		stopButton = new JButton("Stop");
@@ -287,11 +282,11 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(msLabel);
 		buttonPanel.add(msField);		
-		buttonPanel.add(mitLabel);
 		buttonPanel.add(msButton);
+		buttonPanel.add(mitLabel);
 		buttonPanel.add(maxIterations);		
 		buttonPanel.add(detectButton);
-		buttonPanel.add(BGdetectButton);
+//		buttonPanel.add(BGdetectButton);
 		buttonPanel.add(stopButton);
 		buttonPanel.add(startButton);
 		
@@ -319,6 +314,7 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 				System.out.println("Detected CC " + s);
 				ccSwitches.add(e);
 			}
+			
 			JLabel ccLabel = new JLabel("Custom corrections:");	
 			ccLabel.setName("Corrections");		
 			ccLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -327,12 +323,29 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 					
 			ccSwitches.setAlignmentX(Component.LEFT_ALIGNMENT);
 			ccSwitches.setVisible(false);
-			RPanel.add(ccSwitches);
+			RPanel.add(ccSwitches);					
 		}
 		
 		saveButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		saveButton.setVisible(false);
 		RPanel.add(saveButton);
+		
+		//Detector settings components	
+		JLabel detLabel = new JLabel("Detector settings:");	
+		detLabel.setName("Detection");
+		detLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		detLabel.setVisible(false);
+		RPanel.add(detLabel);
+		
+		detSettings.add(detRadioMP = new JRadioButton("Max Pixel", true));
+		detSettings.add(detRadioWF = new JRadioButton("Whole Frame", false));
+		ButtonGroup bg = new ButtonGroup();
+		bg.add(detRadioMP);bg.add(detRadioWF);
+		detSettings.add(detRadioMP);detSettings.add(detRadioWF);
+		
+		detSettings.setAlignmentX(Component.LEFT_ALIGNMENT);
+		detSettings.setVisible(false);
+		RPanel.add(detSettings);
 		
 		// Workspace builder
 		if (MultiFretIcy.PS.wsBool) {
@@ -401,9 +414,11 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 	         	           if (!MultiFretIcy.PS.calcBool) {
 	         	        	   calcChecks.add(RoiBool);
 	         	           } else {
+	         	        	   System.out.println("args number: " + cc.GetArgs().size());
 		         	            for (int i = 0; i < cc.GetArgs().size(); i++) {		
 		         	            	String[] a = cc.GetArg(i);
 		         	            	for (int x = 0; x < a.length; x++) {  
+		         	            		System.out.println("Generating CC arg checkbox: " + cc.GetName(i));
 		         	            		JCheckBox b = new JCheckBox(a[x], false);
 		         	            		b.setName(cc.GetName(i));
 		         	            		b.addItemListener(this);
@@ -497,10 +512,10 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 	// Run the program
 	protected void Execute() throws FileNotFoundException {
 		// Set console output to log
-		PrintStream out = new PrintStream(
-		        new FileOutputStream(GetLogPath("log").toString(), true), true);
-		System.setOut(out);
-		System.setErr(out); //TODO:
+		//PrintStream out = new PrintStream(
+		//        new FileOutputStream(GetLogPath("log").toString(), true), true);
+		//System.setOut(out);
+		//System.setErr(out); //TODO:
 		System.out.println("###Executing####################");
 		
 		// Check enabled custom calculations and extract formula information
@@ -521,6 +536,7 @@ public class Startup implements SequenceListener, ActionListener, ItemListener, 
 	 			}
 	 		}
 		}
+		
 		// Detect background ROI selection
 		for (Sequence sequence : concSeqList) {		
 			
@@ -774,10 +790,10 @@ public void ExitThis() {
 					}
 				}
 
-				MultiFretIcy.PS.mStudio.stopAllActivity();
+				if(!MultiFretIcy.PS.offlineBool){MultiFretIcy.PS.mStudio.stopAllActivity();}
 			case "Exit MultiFret and stop acquisition":
 				//MultiFretIcy.PS.mStudio.closeAllAcquisitions();
-				MultiFretIcy.PS.mStudio.stopAllActivity();
+				if(!MultiFretIcy.PS.offlineBool){MultiFretIcy.PS.mStudio.stopAllActivity();}
 			case "Exit MultiFret":
 				//
 			}
@@ -1070,11 +1086,6 @@ public void ExitThis() {
  		return logName;
 	}
 	
-	private String LoadCP(String s) throws IOException {
-		//Load a property
-		return cp.getProperty(s, choices[0]);
-		}
-	
 	private void SaveCorrections() {
 		//Save corrections
 		for (Component jc : bgSwitches.getComponents()) {
@@ -1119,66 +1130,52 @@ public void ExitThis() {
     		}
     }
     
-    private FitVars calcSquare(int x, int y, int n) {
-    	// Compute number of rows and columns, and cell size
-    	double ratio = x / y;
-    	double ncols_float = Math.sqrt(n * ratio);
-    	double nrows_float = n / ncols_float;
-
-    	// Find best option filling the whole height
-    	double nrows1 = Math.ceil(nrows_float);
-    	double ncols1 = Math.ceil(n / nrows1);
-    	while (nrows1 * ratio < ncols1) {
-    	    nrows1++;
-    	    ncols1 = Math.ceil(n / nrows1);
-    	}
-    	double cell_size1 = y / nrows1;
-
-    	// Find best option filling the whole width
-    	double ncols2 = Math.ceil(ncols_float);
-    	double nrows2 = Math.ceil(n / ncols2);
-    	while (ncols2 < nrows2 * ratio) {
-    	    ncols2++;
-    	    nrows2 = Math.ceil(n / ncols2);
-    	}
-    	double cell_size2 = x / ncols2;
-
-    	// Find the best values
-    	double nrows, ncols, cell_size;
-    	if (cell_size1 < cell_size2) {
-    	    nrows = nrows2;
-    	    ncols = ncols2;
-    	    cell_size = cell_size2;
-    	} else {
-    	    nrows = nrows1;
-    	    ncols = ncols1;
-    	    cell_size = cell_size1;
-    	}
-        FitVars fV = new FitVars(nrows, ncols, cell_size);
-        return fV;
-    }
-    
-	private void detectCells(Sequence seq, Boolean bg) {
+    private void detectCells(Sequence seq, Boolean bg) {
 		
 		//Create detection ROI for BG or cell detection
 		ROI rareROI = null;
-		if (!bg) { rareROI = createROI(seq, maxPixel(seq.getFirstImage()));
-		} else if (bg) {
+		
+		if (!bg && detRadioMP.isSelected()) 
+		{ 
+			seq.removeAllROI();
+			rareROI = createROI(seq, maxPixel(seq.getFirstImage()));
+		} 
+		else if (bg && detRadioMP.isSelected()) 
+		{
 			lastchoiceBool = true;
 			 rareROI = createROI(seq, maxPixel(seq.getFirstImage()));
 			BGdisabler();
-		}//TODO getfirstimage here might not always be good		
+		} 
+		else if (!bg && detRadioWF.isSelected()) 
+		{
+			seq.removeAllROI();
+			rareROI = createROI(seq);
+		} 
+		else if (bg && detRadioWF.isSelected()) 
+		{
+			lastchoiceBool = true;
+			 rareROI = createROI(seq);
+			BGdisabler();
+		}
+
+		//TODO getfirstimage here might not always be good		
 				
 		ActiveContours myAC = new ActiveContours();
 		myAC.createUI();
 		myAC.hideUI();
-		myAC.roiInput.add(rareROI);
+		ROI[] r = {rareROI};
+		
+//		myAC.roiInput.add(rareROI);
+		myAC.roiInput.setValue(r); //TODO: not quite working? On the third bgDetect press there's a mess of shit instead of 3
+		
+		System.out.println("size roiinput: " + myAC.roiInput.size()); 
+
 		myAC.input.setValue(seq);
 		myAC.convergence_nbIter.setValue(Integer.parseInt(maxIterations.getText())); //default is 100,000 but that may take too long.
 //		myAC.regul_weight.setValue(value);
 //		myAC.edge
 //		myAC.edge_c
-//		myAC.edge_weight
+		if (!bg) {myAC.edge_weight.setValue(1.0);} else {myAC.edge_weight.setValue(-1.0);}
 //		myAC.region
 //		myAC.region_c
 //		myAC.region_weight
@@ -1195,14 +1192,13 @@ public void ExitThis() {
 //		myAC.convergence_operation 
 //		myAC.convergence_criterion 
 
-		
-		
 		myAC.output_rois.setValue(ExportROI.ON_INPUT);
 		myAC.output_roiType.setValue(ROIType.POLYGON);
 		myAC.execute();
 		myAC.stopExecution();
 		myAC.clean();
 		myAC.getUI().close();
+		System.out.println("Deleting ROI " + rareROI.getName());
 		seq.removeROI(rareROI);
 	}		  
 	
@@ -1260,15 +1256,18 @@ public void ExitThis() {
 	            MessageDialog.showDialog("No image is present at t=0 and z=0.", MessageDialog.WARNING_MESSAGE);
 	            return null;
 	        }
+	        
+	        System.out.println("Width: " + coords.getX() + " " + seq.getFirstImage().getWidth());
+	        System.out.println("Height: " + coords.getY() + " " + seq.getFirstImage().getHeight());
 
+	        
 	        // create ROI
 	        double maxx = coords.getX()+5 < seq.getFirstImage().getWidth() ? coords.getX()+5 : seq.getFirstImage().getWidth();
 	        double maxy = coords.getY()+5 < seq.getFirstImage().getHeight() ? coords.getY()+5 : seq.getFirstImage().getHeight();
-	        double minx = coords.getX()-5 > seq.getFirstImage().getWidth() ? coords.getX()-5 : seq.getFirstImage().getWidth();
-	        double miny = coords.getY()-5 > seq.getFirstImage().getHeight() ? coords.getY()-5 : seq.getFirstImage().getHeight();
+	        double minx = coords.getX()-5 < 0 ? coords.getX()-5 : 0;
+	        double miny = coords.getY()-5 < 0 ? coords.getY()-5 : 0;
 
-	        @SuppressWarnings("deprecation")
-			ROI2DRectangle roi = new ROI2DRectangle(minx, miny, maxx, maxy); //TODO: make option for size?
+	        ROI2DRectangle roi = new ROI2DRectangle(minx, miny, maxx, maxy); //TODO: make option for size?
 
 	        // add the roi to the sequence
 	        seq.addROI(roi);
@@ -1276,7 +1275,7 @@ public void ExitThis() {
 	    }
 	}
 	
-	   public Point2D maxPixel (IcyBufferedImage image) {
+	public Point2D maxPixel (IcyBufferedImage image) {
 	        // get every pixel and average it
 	        Point2D max = null;
 	        double current = 0;
@@ -1288,7 +1287,7 @@ public void ExitThis() {
 	                    if (current < image.getData(x, y, 0)) 
 	                    {
 	                    	current = image.getData(x, y, 0);
-	                    	max.setLocation(x, y);
+	                    	max = new Point2D.Double(x, y); //TODO probably better as a float
 	                    }
 		                
 		            }
@@ -1298,7 +1297,8 @@ public void ExitThis() {
 		   return (max);		   
 	   }
 	
-	   public Point2D minPixel (IcyBufferedImage image) {
+	   @SuppressWarnings("null")
+	public Point2D minPixel (IcyBufferedImage image) {
 	        // get every pixel and average it
 	        Point2D min = null;
 	        double current = 0;

@@ -157,19 +157,12 @@ public class MultiFretIcy extends PluginActionable {
 				Icy.getMainInterface().getDesktopPane().getBounds().getWidth(),
 				Icy.getMainInterface().getDesktopPane().getBounds().getHeight());
 		
-		System.out.println("###### MFI Version 0.0.4.1 ######");
-		new ToolTipFrame("<html> <body bgcolor=\"#0036d8\"> <font color=\"#f9f1a4\"><b>Running MFI version 0.0.4.1</b></font><br>"
+		System.out.println("###### MFI Version 0.0.4.3 ######");
+		new ToolTipFrame("<html> <body bgcolor=\"#0036d8\"> <font color=\"#f9f1a4\"><b>Running MFI version 0.0.4.3</b></font><br>"
 				+ "<font color=\"#14ff0c\"><sup>28/06/2020</sup>Changelog for this version:"
-				+ "<br>•Fixed an issue with the template function"
-				+ "<br>•Data logs now contain milestone information"
-				+ "<br>•Milestones can now be created before 'Start' is clicked, during the ROI drawing stage"
-				+ "<br>•Graphs aesthetic has been updated, and should pick axis AutoRange in a more desirable fashion"
-				+ "<br>•Deprecated Multipos switch removed"
-				+ "<br>•Minor performance tweaks"
-				+ "<br>•Exit prompt added, allowing users to choose how to end the experiment"				
-				+ "<br>•Workspace functionality added, enabling this will place all viewports into the MultiFret Workspace tab"
-				+ "<br>•Transformation functionality added, enabling this will activate enhanced misalignment correction algorithms"
-				+ "<br>•Custom corrections functionality added, this allows users to write their own corrections"
+				+ "<br>•Fixed an issue with the custom calculations function"
+				+ "<br>•Fixed an issue with the enhanced transformation function"
+				+ "<br>•Added a prototype cell-detector function based on Active Contours"
 				, 20);
 		PS = new Prestart();
 		PS.run();

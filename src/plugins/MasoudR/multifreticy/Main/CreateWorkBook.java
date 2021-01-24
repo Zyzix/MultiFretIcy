@@ -255,6 +255,7 @@ public class CreateWorkBook {
 				cell.setCellValue(serie.getDataItem(i).getYValue());
 				
 				cell = row.createCell(col + 14);
+				if(!MultiFretIcy.PS.calcBool) { //TODO: make raw data work for custom calcs.
 				cell.setCellValue(rawDataPack.get(serie.getKey()).get(0).get(i));
 				
 				cell = row.createCell(col + 15);
@@ -269,7 +270,7 @@ public class CreateWorkBook {
 				if (rawDataPack.get("bg").get(1).size() > 0) {
 					cell.setCellValue(rawDataPack.get("bg").get(1).get(i));
 					}
-				
+				}
 			}
 	        dataRanges.add(new CellRangeAddress(1, spreadSheet.getLastRowNum(), col+12, col+12));
 			col += 10;

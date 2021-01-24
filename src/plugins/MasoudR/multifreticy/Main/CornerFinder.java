@@ -17,6 +17,7 @@ import icy.gui.dialog.MessageDialog;
 import plugins.MasoudR.multifreticy.DataObjects.MyCoordinates;
 
 
+@SuppressWarnings("serial")
 public class CornerFinder extends JPanel{
 
 	public CornerFinder() {
@@ -332,6 +333,7 @@ public class CornerFinder extends JPanel{
 					count1++;					
 				} //ShapesDemo2D sd2 = new ShapesDemo2D(); sd2.DrawPoly(PathPolygon(points));
 				corners = FindCorners(formulae,lowX,highX,lowY,highY);
+				if(corners == null) {return null;}
 				allCorners.add(corners);
 				//PathPolygon(points);
 			}
@@ -462,7 +464,7 @@ public class CornerFinder extends JPanel{
 		
 		if (corners.size() != 4) {System.out.println("\n\nWE FUCKED UP\n");
 		MessageDialog.showDialog("Unable to find corners, ROI may be too distorted.");
-		//exit
+		return null;
 		}
 		System.out.println("\nCorners found:");
 		for (int m = 0; m < corners.size(); m++) {System.out.println(corners.get(m).getX() + " " + corners.get(m).getY());}
